@@ -109,7 +109,7 @@ def aggressionWalk(light, distance):
     max_speed = 12.
 
     # Value of the actuator in the same direction of the turn
-    decr_speed = 7.
+    turn_speed = 7.
 
     # This value is equal to the value of the external sensor when the light is very close. It's used for decrease
     # more the value of the actuator in same direction of the turn when the light is very closer
@@ -128,31 +128,43 @@ def aggressionWalk(light, distance):
     # robot to the light's source and lower it is the velocity
     elif sensor_light_right > sensor_light_left:
         left_actuator = max_speed
-        right_actuator = decr_speed - decr_speed*(sensor_light_right/limit_value)
+        right_actuator = turn_speed - turn_speed*(sensor_light_right/limit_value)
     # if the value of the left sensor is higher than the one on the right, the robot must turn on the left with the
     # maximum speed. The value of the right actuator depends on how much the light is near the robot.
     elif sensor_light_left > sensor_light_right:
         right_actuator = max_speed
-        left_actuator = decr_speed - decr_speed*(sensor_light_left/limit_value)
+        left_actuator = turn_speed - turn_speed*(sensor_light_left/limit_value)
 
 
 def fearWalk(light, distance):
 
     global right_actuator
     global left_actuator
+
+    # This variable is used for prolong the escape of the robot from the light
     global fear
 
+    # The eight light sensors are fused in two sensors. Each of the eight sensors has a different weight depending on
+    # its position: the two external sensors have the highest weight and so on.
     sensor_light_left = 2 * light[0] + 1.5 * light[1] + 1.25 * light[2] + light[3]
     sensor_light_right = light[4] + 1.25 * light[5] + 1.5 * light[6] + 2 * light[7]
 
+    # Max speed of the motors
     max_speed = 12.
-    decr_speed = 5.
+
+    # Value of the actuator in the same direction of the turn
+    turn_speed = 5.
+
+    # Duration in tic of the escape from the light since the value of the two sensors back to zero
+    escape_tic = 20
+
+    # This value is equal to the value of the external sensor when the light is very close. It's used for decrease
+    # more the value of the actuator in same direction of the turn when the light is very closer
     limit_value = 1.8
 
-
-    logMessage("Right: %s" % sensor_light_right)
-    logMessage("Left: %s" % sensor_light_left)
-
+    # If the two sensors have a value equal to zero, we can have two cases:
+    # 1) the robot is escaping from the light, so it must to escape until the counter "fear" isn't equal to zero
+    # 2) the robot is away from the light, so it can walk at random
     if sensor_light_right == 0 and sensor_light_left == 0:
         if fear > 0:
             right_actuator = max_speed
@@ -162,18 +174,21 @@ def fearWalk(light, distance):
             fear = 0
             randomWalk(distance)
 
+    # If the left sensor has a higher value than the right one, it must turn on the right with the maximum speed. So the
+    # left actuator is placed at max_speed and the right one is placed at turn_speed ( << max_speed) minus a quantity
+    # dependent on the nearness of the light ( in this way the robot can turn more quickly if the light is closer).
     elif sensor_light_left > sensor_light_right:
         left_actuator = max_speed
-        right_actuator = decr_speed - decr_speed * (sensor_light_left/limit_value)
-        fear = 20
+        right_actuator = turn_speed - turn_speed * (sensor_light_left/limit_value)
+        fear = escape_tic
 
+    # If the right sensor has a higher value than the left one, it must turn on the left with the maximum speed. So the
+    # right actuator is placed at max_speed and the left one is placed at turn_speed ( << max_speed) minus a quantity
+    # dependent on the nearness of the light ( in this way the robot can turn more quickly if the light is closer).
     elif sensor_light_right > sensor_light_left:
         right_actuator = max_speed
-        left_actuator = decr_speed - decr_speed * (sensor_light_right/limit_value)
-        fear = 20
-
-    logMessage("Right a: %s" % right_actuator)
-    logMessage("Left a: %s" % left_actuator)
+        left_actuator = turn_speed - turn_speed * (sensor_light_right/limit_value)
+        fear = escape_tic
 
 def debugWalk(light, distance):
 
@@ -184,9 +199,6 @@ def debugWalk(light, distance):
     sensor_light_left = 2 *light[0] + 1.5 * light[1] + 1.25 * light[2] + light[3]
     sensor_light_right = light[4] + 1.25 * light[5] + 1.5 * light[6] + 2 * light[7]
 
-
-    right_actuator = 10.
-    left_actuator = 9.
 
     logMessage("Right: %s" % sensor_light_right)
     logMessage("Left: %s" % sensor_light_left)
