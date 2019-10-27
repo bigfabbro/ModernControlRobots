@@ -8,6 +8,7 @@ right_actuator = 0.
 left_actuator = 0.
 right = 0
 left = 0
+fear = 0
 
 
 def randomWalk(distance):
@@ -124,13 +125,54 @@ def aggressionWalk(light, distance):
         left_actuator = decr_speed - decr_speed*(sensor_light_left/limit_value)
 
 
+def fearWalk(light, distance):
+
+    global right_actuator
+    global left_actuator
+    global fear
+
+    sensor_light_left = 2 * light[0] + 1.5 * light[1] + 1.25 * light[2] + light[3]
+    sensor_light_right = light[4] + 1.25 * light[5] + 1.5 * light[6] + 2 * light[7]
+
+    max_speed = 12.
+    decr_speed = 5.
+    limit_value = 1.8
+
+
+    logMessage("Right: %s" % sensor_light_right)
+    logMessage("Left: %s" % sensor_light_left)
+
+    if sensor_light_right == 0 and sensor_light_left == 0:
+        if fear > 0:
+            right_actuator = max_speed
+            left_actuator = max_speed
+            fear -= 1
+        else:
+            fear = 0
+            randomWalk(distance)
+
+    elif sensor_light_left > sensor_light_right:
+        left_actuator = max_speed
+        right_actuator = decr_speed - decr_speed * (sensor_light_left/limit_value)
+        fear = 20
+
+    elif sensor_light_right > sensor_light_left:
+        right_actuator = max_speed
+        left_actuator = decr_speed - decr_speed * (sensor_light_right/limit_value)
+        fear = 20
+
+    logMessage("Right a: %s" % right_actuator)
+    logMessage("Left a: %s" % left_actuator)
+
 def debugWalk(light, distance):
 
     global right_actuator
     global left_actuator
-
+    global left
+    global right
     sensor_light_left = 2 *light[0] + 1.5 * light[1] + 1.25 * light[2] + light[3]
     sensor_light_right = light[4] + 1.25 * light[5] + 1.5 * light[6] + 2 * light[7]
+
 
     right_actuator = 10.
     left_actuator = 9.
@@ -160,12 +202,14 @@ def doBehavior(distance, light, marsData):
     if behavior > 0:
         if behavior == 1:
             loveWalk(light, distance)
-        if behavior == 2:
+        elif behavior == 2:
             aggressionWalk(light, distance)
-        if behavior == 3:
-            debugWalk(light,distance)
-
-    randomWalk(distance)
+        elif behavior == 3:
+            fearWalk(light,distance)
+        elif behavior == 10:
+            debugWalk(light, distance)
+    else:
+        randomWalk(distance)
 
     # if timing(1):
     #     message = "sensor:"
