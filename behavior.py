@@ -61,26 +61,36 @@ def loveWalk(light, distance):
     # and so the speed of the robot decrease
 
     # The eight light sensors are fused in two sensors. Each of the eight sensors has a different weight depending on
-    # its position: the two external sensors have a eigher weight etc.
+    # its position: the two external sensors have a higher weight etc.
     sensor_light_left = 2 *light[0] + 1.5 * light[1] + 1.25 * light[2] + light[3]
     sensor_light_right = light[4] + 1.25 * light[5] + 1.5 * light[6] + 2 * light[7]
 
     # It's fixed a default speed for the two motors
     default_speed = 10.
     # This value is equal to the sum of the two sensors when the robot is sufficiently closer to the light source.
+    # More is this limit value and more closer the robot goes to the light.
     limit_value = 3.3
     # if no light is detected the robot walk at random
     if sensor_light_right == 0 and sensor_light_left == 0:
         randomWalk(distance)
     # if the difference between the light detected by the two sensors is lower than a fixed quantity, the robot can
-    # walk straight
+    # walk straight, decreasing it velocity. The velocity is decreased accordingly to the distance from the light
+    # (eg the intensity of the sensors), such that more is the intensity of the sensors and more is the decrease
+    # of the velocity.
+    # NOTE: the situation of having the two sensors with "the same" value could happen in two situation:
+    # 1 when they have just caught some light, so that one sensor is low and the other is 0 (they are still "similar")
+    # 2 when the light is straight in front of the robot
     elif abs(sensor_light_left-sensor_light_right)<0.1:
         left_actuator = default_speed - default_speed * ((sensor_light_right+sensor_light_left)/limit_value)
         right_actuator = default_speed - default_speed * ((sensor_light_right+sensor_light_left)/limit_value)
     # if the light detected by the left sensor is higher than the right one, the robot must turn on the left
+    # in order to do it, the velocity of the left motor is decreased by a value accordingly to the distance from the
+    # light (as before)
     elif sensor_light_left > sensor_light_right:
         left_actuator = default_speed - default_speed * ((sensor_light_right+sensor_light_left)/limit_value)
-    # if the light detected by the right sensor is higher than the left one, the robot must turn on the right
+    # if the light detected by the right sensor is higher than the left one, the robot must turn on the right.
+    # in order to do it, the velocity of the right motor is decreased by a value accordingly to the distance from the
+    # light (as before)
     elif sensor_light_right > sensor_light_left:
         right_actuator = default_speed - default_speed * ((sensor_light_right + sensor_light_left) / limit_value)
 
@@ -91,8 +101,8 @@ def aggressionWalk(light, distance):
     global left_actuator
 
     # The eight light sensors are fused in two sensors. Each of the eight sensors has a different weight depending on
-    # its position: the two external sensors have a eigher weight etc.
-    sensor_light_left = 2 *light[0] + 1.5 * light[1] + 1.25 * light[2] + light[3]
+    # its position: the two external sensors have the highest weight and so on.
+    sensor_light_left = 2 * light[0] + 1.5 * light[1] + 1.25 * light[2] + light[3]
     sensor_light_right = light[4] + 1.25 * light[5] + 1.5 * light[6] + 2 * light[7]
 
     # Max speed of the motors
@@ -101,20 +111,21 @@ def aggressionWalk(light, distance):
     # Value of the actuator in the same direction of the turn
     decr_speed = 7.
 
-    # This value is equal at the value of the external sensor when the light is very closer. It's used for decrease
+    # This value is equal to the value of the external sensor when the light is very close. It's used for decrease
     # more the value of the actuator in same direction of the turn when the light is very closer
     limit_value = 1.8
 
     # if no light is detected the robot walk at random
     if sensor_light_right == 0 and sensor_light_left == 0:
         randomWalk(distance)
-    # if the difference between the light detected by the two sensors is lower than a fixed quantity, the robot can
-    # walk straight at the maximum speed
+    # if the difference between the light detected by the two sensors is lower than a fixed quantity, the robot have to
+    # walk straight at the maximum speed, since it has the light's source in front of.
     elif abs(sensor_light_right - sensor_light_left) <0.3:
         left_actuator = max_speed
         right_actuator = max_speed
-    # if the value of the right sensor is higher than the one on the left, the robot must turn on the right with the
-    # maximum speed. The value of the left actuator depends on how much the light is near the robot.
+    # if the value of the right sensor is higher than the one on the left, the robot have to turn on the right with the
+    # maximum speed. The value of the right actuator depends on how much the light is near to the robot, nearer is the
+    # robot to the light's source and lower it is the velocity
     elif sensor_light_right > sensor_light_left:
         left_actuator = max_speed
         right_actuator = decr_speed - decr_speed*(sensor_light_right/limit_value)
