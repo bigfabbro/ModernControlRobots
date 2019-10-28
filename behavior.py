@@ -124,12 +124,12 @@ def aggressionWalk(light, distance):
     # robot to the light's source and lower it is the velocity
     elif sensor_light_right > sensor_light_left:
         left_actuator = max_speed
-        right_actuator = turn_speed - turn_speed*(sensor_light_right/limit_value)
+        right_actuator = turn_speed * (1-sensor_light_right/limit_value)
     # if the value of the left sensor is higher than the one on the right, the robot must turn on the left with the
     # maximum speed. The value of the right actuator depends on how much the light is near the robot.
     elif sensor_light_left > sensor_light_right:
         right_actuator = max_speed
-        left_actuator = turn_speed - turn_speed*(sensor_light_left/limit_value)
+        left_actuator = turn_speed * (1-sensor_light_left/limit_value)
 
 
 def fearWalk(light, distance):
