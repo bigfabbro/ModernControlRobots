@@ -209,8 +209,7 @@ def curiosityWalk(light, distance)
         left_actuator = default_speed * (1-((sensor_light_right+sensor_light_left)/limit_value))
         right_actuator = default_speed * (1-((sensor_light_right+sensor_light_left)/limit_value))
     
-
-
+    
 
 def debugWalk(light, distance):
 
@@ -228,16 +227,6 @@ def debugWalk(light, distance):
     logMessage("Left: %s" % sensor_light_left)
 
     
-
-
-
-
-
-
-
-
-
-
 
 def doBehavior(distance, light, marsData):
     """Perform behavior depending on the "Robotik2/behavior" variable in
