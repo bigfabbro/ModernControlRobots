@@ -51,7 +51,7 @@ def loveWalk(light, distance):
     # 3- when the robot is closer to the light stop it
 
     # Note: the speed decrease is calculated by this formula:
-    #                                              v' = v - v * ((rs + ls)/ lv)
+    #                                              v' = v * (1-((rs + ls)/ lv))
     # where:
     # - v': is the current speed
     # - v : is the default speed
@@ -81,18 +81,18 @@ def loveWalk(light, distance):
     # 1 when they have just caught some light, so that one sensor is low and the other is 0 (they are still "similar")
     # 2 when the light is straight in front of the robot
     elif abs(sensor_light_left-sensor_light_right)<0.1:
-        left_actuator = default_speed - default_speed * ((sensor_light_right+sensor_light_left)/limit_value)
-        right_actuator = default_speed - default_speed * ((sensor_light_right+sensor_light_left)/limit_value)
+        left_actuator = default_speed * (1-((sensor_light_right+sensor_light_left)/limit_value))
+        right_actuator = default_speed * (1-((sensor_light_right+sensor_light_left)/limit_value))
     # if the light detected by the left sensor is higher than the right one, the robot must turn on the left
     # in order to do it, the velocity of the left motor is decreased by a value accordingly to the distance from the
     # light (as before)
     elif sensor_light_left > sensor_light_right:
-        left_actuator = default_speed - default_speed * ((sensor_light_right+sensor_light_left)/limit_value)
+        left_actuator = default_speed * (1-((sensor_light_right+sensor_light_left)/limit_value))
     # if the light detected by the right sensor is higher than the left one, the robot must turn on the right.
     # in order to do it, the velocity of the right motor is decreased by a value accordingly to the distance from the
     # light (as before)
     elif sensor_light_right > sensor_light_left:
-        right_actuator = default_speed - default_speed * ((sensor_light_right + sensor_light_left) / limit_value)
+        right_actuator = default_speed * (1-((sensor_light_right + sensor_light_left) / limit_value))
 
 
 def aggressionWalk(light, distance):
@@ -163,7 +163,7 @@ def fearWalk(light, distance):
     limit_value = 1.8
 
     # If the two sensors have a value equal to zero, we can have two cases:
-    # 1) the robot is escaping from the light, so it must to escape until the counter "fear" isn't equal to zero
+    # 1) the robot is escaping from the light, so it must escape until the counter "fear" isn't equal to zero
     # 2) the robot is away from the light, so it can walk at random
     if sensor_light_right == 0 and sensor_light_left == 0:
         if fear > 0:
@@ -179,7 +179,7 @@ def fearWalk(light, distance):
     # dependent on the nearness of the light ( in this way the robot can turn more quickly if the light is closer).
     elif sensor_light_left > sensor_light_right:
         left_actuator = max_speed
-        right_actuator = turn_speed - turn_speed * (sensor_light_left/limit_value)
+        right_actuator = turn_speed * (1 - sensor_light_left/limit_value)
         fear = escape_tic
 
     # If the right sensor has a higher value than the left one, it must turn on the left with the maximum speed. So the
@@ -187,7 +187,7 @@ def fearWalk(light, distance):
     # dependent on the nearness of the light ( in this way the robot can turn more quickly if the light is closer).
     elif sensor_light_right > sensor_light_left:
         right_actuator = max_speed
-        left_actuator = turn_speed - turn_speed * (sensor_light_right/limit_value)
+        left_actuator = turn_speed * (1 - sensor_light_right/limit_value)
         fear = escape_tic
 
 def debugWalk(light, distance):
