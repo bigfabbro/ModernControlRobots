@@ -34,8 +34,12 @@ def randomWalk(distance):
     else:
         left -= 1
 
-# Note: All the values (e.g. limit_value, weight of the different sensors and so on) indicated in this code become from simulation results 
-# and they aren't mathematical optimized 
+
+def printValues(sll, slr):
+
+    logMessage("actuator right value: %s" % slr)
+    logMessage("actuator left value: %s" %sll)
+
 
 def loveWalk(light, distance):
 
@@ -66,6 +70,9 @@ def loveWalk(light, distance):
     # This value is equal to the sum of the two sensors when the robot is sufficiently closer to the light source.
     # More is this limit value and more closer the robot goes to the light.
     limit_value = 3.3
+    # It represents the difference between the two sensors. It is used to understand when the light is right in front 
+    # of the robot and so it can go straight (slowing its velocity)
+    precision = 0.1
     # if no light is detected the robot walk at random
     if sensor_light_right == 0 and sensor_light_left == 0:
         randomWalk(distance)
@@ -76,7 +83,7 @@ def loveWalk(light, distance):
     # NOTE: the situation of having the two sensors with "the same" value could happen in two situation:
     # 1 when they have just caught some light, so that one sensor is low and the other is 0 (they are still "similar")
     # 2 when the light is straight in front of the robot
-    elif abs(sensor_light_left-sensor_light_right)<0.1:
+    elif abs(sensor_light_left-sensor_light_right)<precision:
         left_actuator = default_speed * (1-((sensor_light_right+sensor_light_left)/limit_value))
         right_actuator = default_speed * (1-((sensor_light_right+sensor_light_left)/limit_value))
     # if the light detected by the left sensor is higher than the right one, the robot must turn on the left
@@ -111,12 +118,15 @@ def aggressionWalk(light, distance):
     # more the value of the actuator in same direction of the turn when the light is very closer
     limit_value = 1.8
 
+    # It represents the difference between the two sensors. It is used to understand when the light is right in front 
+    # of the robot and so it can go straight (increasing its velocity)
+    precision = 0.3
     # if no light is detected the robot walk at random
     if sensor_light_right == 0 and sensor_light_left == 0:
         randomWalk(distance)
     # if the difference between the light detected by the two sensors is lower than a fixed quantity, the robot have to
     # walk straight at the maximum speed, since it has the light's source in front of.
-    elif abs(sensor_light_right - sensor_light_left) <0.3:
+    elif abs(sensor_light_right - sensor_light_left) <precision:
         left_actuator = max_speed
         right_actuator = max_speed
     # if the value of the right sensor is higher than the one on the left, the robot have to turn on the right with the
@@ -124,12 +134,12 @@ def aggressionWalk(light, distance):
     # robot to the light's source and lower it is the velocity
     elif sensor_light_right > sensor_light_left:
         left_actuator = max_speed
-        right_actuator = turn_speed * (1-sensor_light_right/limit_value)
+        right_actuator = turn_speed - turn_speed*(sensor_light_right/limit_value)
     # if the value of the left sensor is higher than the one on the right, the robot must turn on the left with the
     # maximum speed. The value of the right actuator depends on how much the light is near the robot.
     elif sensor_light_left > sensor_light_right:
         right_actuator = max_speed
-        left_actuator = turn_speed * (1-sensor_light_left/limit_value)
+        left_actuator = turn_speed - turn_speed*(sensor_light_left/limit_value)
 
 
 def fearWalk(light, distance):
@@ -187,7 +197,7 @@ def fearWalk(light, distance):
         fear = escape_tic
 
 
-def curiosityWalk(light, distance)
+def curiosityWalk(light, distance):
     global right_actuator
     global left_actuator
 
@@ -195,21 +205,48 @@ def curiosityWalk(light, distance)
     default_speed = 10.
     # This value is equal to the sum of the two sensors when the robot is sufficiently closer to the light source.
     # More is this limit value and more closer the robot goes to the light.
-    limit_value = 3.3
-
-
+    limit_value = 2.6
+    # It represents the difference between the two sensors. It is used to understand when the light is right in front 
+    # of the robot and so it can go straight (slowing its velocity)
+    precision = 0.3
+    # The eight light sensors are fused in two sensors. Each of the eight sensors has a different weight depending on
+    # its position: the two external sensors have the highest weight and so on.
     sensor_light_left = 2 *light[0] + 1.5 * light[1] + 1.25 * light[2] + light[3]
     sensor_light_right = light[4] + 1.25 * light[5] + 1.5 * light[6] + 2 * light[7]
 
-
+    # If no light is detected the robot walk at random
     if sensor_light_right == 0 and sensor_light_left == 0:
         randomWalk(distance)
+    # If the sum of the two sensor is higher than limit value, the robot can go away. We can have three cases:
+    # 1) the light is on the right, the robot will turn on the left, so the right actuator must be faster than the left one
+    # 2) the light is on the left, the robot will turn on the right, so the left actuator must be faster than the right one
+    # 3) the light is front of the robot, it will go in the opposite direction.
+    elif (sensor_light_left+sensor_light_right) >= limit_value:
+        if sensor_light_left > sensor_light_right:
+            left_actuator = default_speed
+        elif sensor_light_right > sensor_light_left:
+            right_actuator = default_speed
+        elif sensor_light_left == sensor_light_right:
+            right_actuator = default_speed
+            left_actuator = -default_speed
 
-    elif abs(sensor_light_left-sensor_light_right) < 0.1:
-        left_actuator = default_speed * (1-((sensor_light_right+sensor_light_left)/limit_value))
-        right_actuator = default_speed * (1-((sensor_light_right+sensor_light_left)/limit_value))
-    
-    
+    # if the difference between the light detected by the two sensors is lower than a fixed quantity, the robot have to
+    # walk straight decreasing its velocity, since it has the light's source in front of.
+    elif abs(sensor_light_left-sensor_light_right)<precision:
+        left_actuator = default_speed * (1.2-((sensor_light_right+sensor_light_left)/limit_value))
+        right_actuator = default_speed * (1.2-((sensor_light_right+sensor_light_left)/limit_value))
+    # if the light detected by the left sensor is higher than the right one, the robot must turn on the left
+    # in order to do it, the velocity of the left motor is decreased by a value accordingly to the distance from the
+    # light
+    elif sensor_light_left > sensor_light_right:
+        left_actuator = default_speed * (1.2-((sensor_light_right+sensor_light_left)/limit_value))
+    # if the light detected by the right sensor is higher than the left one, the robot must turn on the right
+    # in order to do it, the velocity of the right motor is decreased by a value accordingly to the distance from the
+    # light
+    elif sensor_light_right > sensor_light_left:
+        right_actuator = default_speed * (1.2-((sensor_light_right + sensor_light_left) / limit_value))
+
+
 
 def debugWalk(light, distance):
 
@@ -218,6 +255,7 @@ def debugWalk(light, distance):
     global left
     global right
     right_actuator = 7.
+    
     left_actuator = 7.
     sensor_light_left = 2 *light[0] + 1.5 * light[1] + 1.25 * light[2] + light[3]
     sensor_light_right = light[4] + 1.25 * light[5] + 1.5 * light[6] + 2 * light[7]
@@ -226,7 +264,6 @@ def debugWalk(light, distance):
     logMessage("Right: %s" % sensor_light_right)
     logMessage("Left: %s" % sensor_light_left)
 
-    
 
 def doBehavior(distance, light, marsData):
     """Perform behavior depending on the "Robotik2/behavior" variable in
@@ -241,6 +278,8 @@ def doBehavior(distance, light, marsData):
             aggressionWalk(light, distance)
         elif behavior == 3:
             fearWalk(light,distance)
+        elif behavior ==4:
+            curiosityWalk(light,distance)
         elif behavior == 10:
             debugWalk(light, distance)
     else:
