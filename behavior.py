@@ -246,6 +246,47 @@ def curiosityWalk(light, distance):
     elif sensor_light_right > sensor_light_left:
         right_actuator = default_speed * (1.2-((sensor_light_right + sensor_light_left) / limit_value))
 
+def tortoiseWalk(light,distance):
+
+    global right_actuator
+    global left_actuator
+
+    sensor_light_left = 2 * light[0] + 1.5 * light[1] + 1.25 * light[2] + light[3]
+    sensor_light_right = light[4] + 1.25 * light[5] + 1.5 * light[6] + 2 * light[7]
+
+    # It's fixed a default speed for the two motors
+    default_speed = 10.
+    # This value is equal to the sum of the two sensors when the robot is sufficiently closer to the light source.
+    # More is this limit value and more closer the robot goes to the light.
+    limit_value = 3
+    # It represents the difference between the two sensors. It is used to understand when the light is right in front
+    # of the robot and so it can go straight
+    precision = 0.1
+    # if no light is detected the robot walk at random
+    if sensor_light_right == 0 and sensor_light_left == 0:
+        randomWalk(distance)
+    # If the sum of the two sensors is greater than limit_value the robot has to move away from the light
+    elif sensor_light_right+sensor_light_left >= limit_value:
+        fearWalk(light,distance)
+    # if the difference between the light detected by the two sensors is lower than a fixed quantity, the robot can
+    # walk straight.
+    # NOTE: the situation of having the two sensors with "the same" value could happen in two situation:
+    # 1 when they have just caught some light, so that one sensor is low and the other is 0 (they are still "similar")
+    # 2 when the light is straight in front of the robot
+    elif abs(sensor_light_left - sensor_light_right) < precision:
+        left_actuator = default_speed
+        right_actuator = default_speed
+    # if the light detected by the left sensor is higher than the right one, the robot must turn on the left
+    # in order to do it, the velocity of the left motor is decreased by a value accordingly to the distance from the
+    # light
+    elif sensor_light_left > sensor_light_right:
+        left_actuator = default_speed * (1 - ((sensor_light_right + sensor_light_left) / limit_value))
+    # if the light detected by the right sensor is higher than the left one, the robot must turn on the right.
+    # in order to do it, the velocity of the right motor is decreased by a value accordingly to the distance from the
+    # light
+    elif sensor_light_right > sensor_light_left:
+        right_actuator = default_speed * (1 - ((sensor_light_right + sensor_light_left) / limit_value))
+
 
 
 def debugWalk(light, distance):
@@ -280,6 +321,8 @@ def doBehavior(distance, light, marsData):
             fearWalk(light,distance)
         elif behavior ==4:
             curiosityWalk(light,distance)
+        elif behavior == 5:
+            tortoiseWalk(light,distance)
         elif behavior == 10:
             debugWalk(light, distance)
     else:
