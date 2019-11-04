@@ -11,6 +11,8 @@ left = 0
 fear = 0
 
 
+
+
 def randomWalk(distance):
     """A behavior that makes the robot randomly roam the area."""
     global right_actuator
@@ -55,7 +57,7 @@ def loveWalk(light, distance):
     # where:
     # - v': is the current speed
     # - v : is the default speed
-    # - rs/ls : are respectvely the value of right sensor and the left sensor
+    # - rs/ls : are respectively the value of right sensor and the left sensor
     # - lv : is the limit value
     # It's easy to see that more the robot is closer to light source and more the quantity (rs+ls)/lv is closer to 1
     # and so the speed of the robot decrease
@@ -147,7 +149,7 @@ def fearWalk(light, distance):
     global right_actuator
     global left_actuator
 
-    # This variable is used for prolong the escape of the robot from the light
+    # This variable is used to prolong the escape of the robot from the light
     global fear
 
     # The eight light sensors are fused in two sensors. Each of the eight sensors has a different weight depending on
@@ -162,17 +164,18 @@ def fearWalk(light, distance):
     turn_speed = 5.
 
     # Duration in tic of the escape from the light since the value of the two sensors back to zero
-    escape_tic = 20
+    escape_tic = 10
 
     # This value is equal to the value of the external sensor when the light is very close. It's used for decrease
     # more the value of the actuator in same direction of the turn when the light is very closer
     limit_value = 1.8
 
     # If the two sensors have a value equal to zero, we can have two cases:
-    # 1) the robot is escaping from the light, so it must escape until the counter "fear" isn't equal to zero
+    # 1) the robot is escaping from the light, so it must escape until the counter "fear" isn't equal to zero or
+    #    until it isn't closer to an obstacle
     # 2) the robot is away from the light, so it can walk at random
     if sensor_light_right == 0 and sensor_light_left == 0:
-        if fear > 0:
+        if fear > 0 and distance[7] > 0.3 and distance[5] > 0.3 and distance[2] > 0.3 and distance[0] > 0.3:
             right_actuator = max_speed
             left_actuator = max_speed
             fear -= 1
@@ -251,9 +254,24 @@ def tortoiseWalk(light,distance):
     global right_actuator
     global left_actuator
 
+    # A light with intensity higher than it can be define as a strong light.
+    strong_light = 3
+
     sensor_light_left = 2 * light[0] + 1.5 * light[1] + 1.25 * light[2] + light[3]
     sensor_light_right = light[4] + 1.25 * light[5] + 1.5 * light[6] + 2 * light[7]
 
+    # We can combine the behaviours of the Braitenberg's vehicles to implement the Grey Walter's tortoise.
+    # If the two sensors are both equal to zero, the robot search for a weak light. If the robot detects a weak
+    # light (sensor_light_left + sensor_light_right < strong_light) it moves to the weak light (= love walk). When
+    # the robot perceives a strong light (sensor_light_right + sensor_light_left >= strong_light)it turns away from
+    # the strong light (= fear walk).
+    if sensor_light_left == 0 and sensor_light_right == 0:
+        randomWalk(distance)
+    elif (sensor_light_right+sensor_light_left) >= strong_light:
+        fearWalk(light,distance)
+    else:
+        loveWalk(light,distance)
+    '''
     # It's fixed a default speed for the two motors
     default_speed = 10.
     # This value is equal to the sum of the two sensors when the robot is sufficiently closer to the light source.
@@ -286,25 +304,7 @@ def tortoiseWalk(light,distance):
     # light
     elif sensor_light_right > sensor_light_left:
         right_actuator = default_speed * (1 - ((sensor_light_right + sensor_light_left) / limit_value))
-
-
-
-def debugWalk(light, distance):
-
-    global right_actuator
-    global left_actuator
-    global left
-    global right
-    right_actuator = 7.
-    
-    left_actuator = 7.
-    sensor_light_left = 2 *light[0] + 1.5 * light[1] + 1.25 * light[2] + light[3]
-    sensor_light_right = light[4] + 1.25 * light[5] + 1.5 * light[6] + 2 * light[7]
-
-
-    logMessage("Right: %s" % sensor_light_right)
-    logMessage("Left: %s" % sensor_light_left)
-
+    '''
 
 def doBehavior(distance, light, marsData):
     """Perform behavior depending on the "Robotik2/behavior" variable in
@@ -312,7 +312,7 @@ def doBehavior(distance, light, marsData):
     global right_actuator, left_actuator
 
     behavior = marsData["Config"]["Robotik2"]["behavior"]
-    if behavior > 0:
+    if 0 < behavior < 6:
         if behavior == 1:
             loveWalk(light, distance)
         elif behavior == 2:
@@ -323,8 +323,6 @@ def doBehavior(distance, light, marsData):
             curiosityWalk(light,distance)
         elif behavior == 5:
             tortoiseWalk(light,distance)
-        elif behavior == 10:
-            debugWalk(light, distance)
     else:
         randomWalk(distance)
 
