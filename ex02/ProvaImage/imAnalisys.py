@@ -66,6 +66,6 @@ class imageAnalisys:
 an = imageAnalisys()
 # find the closer object whit the shape that is indicated in the second parameter and with the color indicated in
 # first parameter. It returns a boolean value and a tuple with the position of the object.
-find, position = an.positionShapeColour("scena1.png", "blue", "Retangle")
+find, position = an.positionShapeColour("scena1.png", "red", "Circle")
 if find:
     print(position)
