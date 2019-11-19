@@ -7,10 +7,10 @@ global current_behavior
 
 max_high = 80
 min_high = 10
-find = False
+readyToOrbit = False
 lenghtBall = 0
 closer = False
-numPixels = 0 
+numPixels = 0
 
 range_min = [200, 40, 40]
 range_max = [255, 70, 70]
@@ -71,7 +71,8 @@ def centering():
             k += 4
     logMessage("lx: %s" % lx)
     logMessage("rx: %s" % rx)
-    if rx + lx > 920:
+    numPixels = rx + lx
+    if numPixels > 920:
         direction = "stop"
         closer = True
     elif lx > rx+50:
@@ -84,13 +85,14 @@ def centering():
 
 def orbitalWalk():
     global numPixels
+    global readyToOrbit
     pixelsRight = camera_data_acquisition.cameraData["cam1"][640 * min_high:640 * max_high]
     left_bound = 49 * 4
     right_bound = 109 * 4
     middle = 79*4
     high = max_high - min_high
     lx = 0
-    rx = 0 
+    rx = 0
     for j in range(high):
         i = left_bound + 640 * j
         k = middle + 640 * j
@@ -102,10 +104,19 @@ def orbitalWalk():
                 rx += 1
             i += 4
             k += 4
-    if abs(numPixels - (rx+lx)) > 50:
+    if abs(numPixels - (rx+lx)) > 50 and not readyToOrbit:
         direction = "right"
     else:
-        direction = "stop"
+        if not readyToOrbit:
+            readyToOrbit = True
+        if numPixels < rx + lx:
+            logMessage("kingFaber")
+            direction = "orbitRight"
+        elif numPixels >= rx + lx:
+            logMessage("serGuidotti")
+            direction = "orbitLeft"
+        else:
+            direction = "orbit"
     return direction
 
 
@@ -119,6 +130,15 @@ def moveToBall(direction):
     elif direction == "stop":
         left_cmd = 0.
         right_cmd = 0.
+    elif direction == "orbitRight":
+        left_cmd = -2.
+        right_cmd = -0.5
+    elif direction == "orbitLeft":
+        left_cmd = -1.85
+        right_cmd = -2.
+    elif direction == "orbit":
+        left_cmd = -1.
+        right_cmd = -1.
     return left_cmd, right_cmd
 
 def computeRedBallHorizontalPosition():
@@ -131,7 +151,6 @@ def testBehavior():
     min_high = 20
     horizontal = np.copy(cam["cam0"][640*min_high:640*max_high])
     filename = "prova.ppm"
-    logMessage("lungh %s" % len(horizontal))
     with open(filename, "w") as f:
         f.write("P3\n")
         f.write(str(160) + " " + str(40) + "\n")
@@ -159,19 +178,16 @@ def doBehavior(marsData):
     elif (current_behavior==1):
         left_cmd,right_cmd = pointTurn()
         direction = centering()
-        logMessage("%s" % direction)
         if direction is not None:
             left_cmd, right_cmd = moveToBall(direction)
     elif (current_behavior == 2):
         if closer == False:
             left_cmd,right_cmd = pointTurn()
             direction = centering()
-            logMessage("%s" % direction)
             if direction is not None:
                 left_cmd, right_cmd = moveToBall(direction)
         else:
-            logMessage("%s" % closer)
             direction = orbitalWalk()
             left_cmd, right_cmd = moveToBall(direction)
-        
+
     return (left_cmd, right_cmd)
