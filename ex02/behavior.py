@@ -5,35 +5,28 @@ import numpy as np
 
 global current_behavior
 
-range_min = [200, 40, 40]
-range_max = [255, 70, 70]
+high = 120
+width = 160
+pixelComponents = 4
 max_high = 80
 min_high = 10
-find = False
+readyToOrbit = False
 lenghtBall = 0
 closer = False
 numPixels = 0
 
-range_min = [200, 40, 40]
-range_max = [255, 70, 70]
+range_min_red = [200, 40, 40]
+range_max_red = [255, 70, 70]
 
-max_high_poles = 120
-min_high_poles = 80
+range_min_green = [200, 40, 40]
+range_max_green = [255, 70, 70]
 
+range_min_blue = [200, 40, 40]
+range_max_blue = [255, 70, 70]
 
-def convertInPixel(camera_name):
-    cam = camera_data_acquisition.cameraData[camera_name]
-    pixels = []
-    i = 0
-    while i < len(cam):
-        pixel = [cam[i]*255, cam[i+1]*255, cam[i+2]*255]
-        pixels = np.append(pixels, pixel)
-        i += 4
-    return pixels
+range_min_yellow = [200, 40, 40]
+range_max_yellow = [255, 70, 70]
 
-def giveBord(pixels):
-    left_bord = pixels[pixels % 160 == 0]
-    return left_bord
 
 def initialBehavior():
     global current_behavior
@@ -44,7 +37,21 @@ def pointTurn():
     right_cmd = -3.
     return left_cmd, right_cmd
 
-def isRed(pixel):
+def isColor(pixel, color):
+    range_min = [0,0,0]
+    range_max = [255,255,255]
+    if color == "red":
+        range_min = range_min_red
+        range_max = range_max_red
+    elif color == "green":
+        range_min = range_min_green
+        range_max = range_max_green
+    elif color == "blue":
+        range_min = range_min_blue
+        range_max = range_max_blue
+    elif color == "yellow":
+        range_min = range_min_yellow
+        range_max = range_min_yellow
     pixel = [pixel[0]*255, pixel[1]*255, pixel[2]*255]
     if pixel[0] >range_min[0] and pixel[0] < range_max[0] and pixel[1] > range_min[1] and pixel[1] < range_max[1]\
         and pixel[2] > range_min[2] and pixel[2] < range_max[2]:
@@ -52,59 +59,52 @@ def isRed(pixel):
     else:
         return False
 
-def centering():
-    pixelsRight = camera_data_acquisition.cameraData["cam1"][640 * min_high:640 * max_high]
-    pixelsLeft = camera_data_acquisition.cameraData["cam0"][640 * min_high:640 * max_high]
+def sidePixelNumber(camera, color_of_ball):
+    global width
+    global pixelComponents
+    global min_high
+    global max_high
+    pixels = camera_data_acquisition.cameraData[camera][width*pixelComponents*min_high:width*pixelComponents*max_high]
     left_bound = 49 * 4
-    right_bound = 109 * 4
-    middle = 79*4
-    high = max_high - min_high
+    middle = (width/2 - 1) * 4
+    slice_high = max_high - min_high
     rx = 0
     lx = 0
-    direction = None
-    for j in range(high):
+    for j in range(slice_high):
         i = left_bound + 640 * j
         k = middle + 640 * j
         current_middle = middle + 640 * j
         while i < current_middle:
-            if isRed(pixelsLeft[i:i+3]):
+            if isColor(pixels[i:i + 3], color_of_ball):
                 lx += 1
-            if isRed(pixelsLeft[k:k+3]):
+            if isColor(pixels[k:k + 3], color_of_ball):
                 rx += 1
-            i += 4
-            k += 4
-    logMessage("lx: %s" % lx)
-    logMessage("rx: %s" % rx)
-    if rx + lx > 920:
+            i += pixelComponents
+            k += pixelComponents
+    return lx, rx
+
+def centering(color_of_ball):
+    global numPixels
+    global closer
+    direction = None
+    lx, rx = sidePixelNumber("cam0", color_of_ball)
+    numPixels = rx + lx
+    if numPixels > 920:
         direction = "stop"
+        closer = True
     elif lx > rx+50:
         direction = "left"
     elif rx > lx+50:
         direction = "right"
     elif (lx > 0 or rx > 0):
         direction = "straight"
-    return  direction, rx+lx
+    return direction
 
-def orbitalWalk(numPixels):
-    pixelsRight = camera_data_acquisition.cameraData["cam1"][640 * min_high:640 * max_high]
-    left_bound = 49 * 4
-    right_bound = 109 * 4
-    middle = 79*4
-    high = max_high - min_high
-    lx = 0
-    rx = 0 
-    for j in range(high):
-        i = left_bound + 640 * j
-        k = middle + 640 * j
-        current_middle = middle + 640 * j
-        while i < current_middle:
-            if isRed(pixelsRight[i:i+3]):
-                lx += 1
-            if isRed(pixelsRight[k:k+3]):
-                rx += 1
-            i += 4
-            k += 4
-    if abs(numPixels - (rx+lx)) > 50:
+def orbitalWalk(color_of_ball):
+    global numPixels
+    global readyToOrbit
+    lx, rx = sidePixelNumber("cam1", color_of_ball)
+    if abs(numPixels - (rx+lx)) > 50 and not readyToOrbit:
         direction = "right"
     else:
         if not readyToOrbit:
@@ -118,7 +118,7 @@ def orbitalWalk(numPixels):
     return direction
 
 
-def moveToBall(direction):
+def move(direction):
     right_cmd = -5.
     left_cmd = -5.
     if direction == "right":
@@ -129,19 +129,15 @@ def moveToBall(direction):
         left_cmd = 0.
         right_cmd = 0.
     elif direction == "orbitRight":
-        left_cmd = -2.
-        right_cmd = -0.5
+        left_cmd = -4.
+        right_cmd = -3.4
     elif direction == "orbitLeft":
-        left_cmd = -1.6
-        right_cmd = -2.
+        left_cmd = -3.4
+        right_cmd = -4.
     elif direction == "orbit":
         left_cmd = -1.
         right_cmd = -1.
     return left_cmd, right_cmd
-
-def computeRedBallHorizontalPosition():
-    global lenghtBall
-    lenghtBall += 1
 
 def testBehavior():
     cam = camera_data_acquisition.cameraData
@@ -149,7 +145,6 @@ def testBehavior():
     min_high = 20
     horizontal = np.copy(cam["cam0"][640*min_high:640*max_high])
     filename = "prova.ppm"
-    logMessage("lungh %s" % len(horizontal))
     with open(filename, "w") as f:
         f.write("P3\n")
         f.write(str(160) + " " + str(40) + "\n")
@@ -164,6 +159,7 @@ def testBehavior():
             f.write("\n")
 
 def doBehavior(marsData):
+    global closer
     global current_behavior
     (left_cmd, right_cmd) = (0.0, 0.0)
     behavior = marsData["Config"]["Robot"]["behavior"]
@@ -175,14 +171,17 @@ def doBehavior(marsData):
         right_cmd = -5.0
     elif (current_behavior==1):
         left_cmd,right_cmd = pointTurn()
-        direction, numPixels= centering()
-        logMessage("%s" % direction)
+        direction = centering("red")
         if direction is not None:
-            if direction == "stop":
-                current_behavior = 2
-            else:
-                left_cmd, right_cmd = moveToBall(direction)
+            left_cmd, right_cmd = move(direction)
     elif (current_behavior == 2):
-        direction = orbitalWalk(direction, numPixels)
-        left_cmd, right_cmd = moveToBall(direction)
+        if closer == False:
+            left_cmd,right_cmd = pointTurn()
+            direction = centering("red")
+            if direction is not None:
+                left_cmd, right_cmd = move(direction)
+        else:
+            direction = orbitalWalk("red")
+            left_cmd, right_cmd = move(direction)
+
     return (left_cmd, right_cmd)
