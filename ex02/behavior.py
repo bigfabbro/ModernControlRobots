@@ -5,8 +5,8 @@ import numpy as np
 
 global current_behavior
 
-range_min = [235, 40, 40]
-range_max = [255, 60, 60]
+range_min = [200, 40, 40]
+range_max = [255, 70, 70]
 max_high = 80
 min_high = 10
 find = False
@@ -33,7 +33,7 @@ def initialBehavior():
 
 def pointTurn():
     left_cmd  = 0.
-    right_cmd = -1.
+    right_cmd = -3.
     return left_cmd, right_cmd
 
 def isRed(pixel):
@@ -53,6 +53,7 @@ def centering():
     high = max_high - min_high
     rx = 0
     lx = 0
+    direction = None
     for j in range(high):
         i = left_bound + 640 * j
         k = middle + 640 * j
@@ -64,17 +65,42 @@ def centering():
                 rx += 1
             i += 4
             k += 4
-    if rx + lx > 500:
+    logMessage("lx: %s" % lx)
+    logMessage("rx: %s" % rx)
+    if rx + lx > 920:
         direction = "stop"
-    elif abs(lx - rx) < 5000 and (lx > 0 and rx > 0):
-        direction = "straight"
-    elif lx > rx:
+    elif lx > rx+50:
         direction = "left"
-    else:
+    elif rx > lx+50:
         direction = "right"
-    return  direction
+    elif (lx > 0 or rx > 0):
+        direction = "straight"
+    return  direction, rx+lx
 
-
+def orbitalWalk(numPixels):
+    pixelsRight = camera_data_acquisition.cameraData["cam1"][640 * min_high:640 * max_high]
+    left_bound = 49 * 4
+    right_bound = 109 * 4
+    middle = 79*4
+    high = max_high - min_high
+    lx = 0
+    rx = 0 
+    for j in range(high):
+        i = left_bound + 640 * j
+        k = middle + 640 * j
+        current_middle = middle + 640 * j
+        while i < current_middle:
+            if isRed(pixelsRight[i:i+3]):
+                lx += 1
+            if isRed(pixelsRight[k:k+3]):
+                rx += 1
+            i += 4
+            k += 4
+    if abs(numPixels - (rx+lx)) > 50:
+        direction = "right"
+    else:
+        direction = "stop"
+    return direction
 
 
 def moveToBall(direction):
@@ -121,12 +147,18 @@ def doBehavior(marsData):
         logMessage("Switching to behavior: "+str(behavior))
         current_behavior = behavior
     if (current_behavior == 0):
-        left_cmd = -2.0
-        right_cmd = -2.0
+        left_cmd = -5.0
+        right_cmd = -5.0
     elif (current_behavior==1):
         left_cmd,right_cmd = pointTurn()
-        direction = centering()
+        direction, numPixels= centering()
         logMessage("%s" % direction)
         if direction is not None:
-            left_cmd, right_cmd = moveToBall(direction)
+            if direction == "stop":
+                current_behavior = 2
+            else:
+                left_cmd, right_cmd = moveToBall(direction)
+    elif (current_behavior == 2):
+        direction = orbitalWalk(direction, numPixels)
+        left_cmd, right_cmd = moveToBall(direction)
     return (left_cmd, right_cmd)
