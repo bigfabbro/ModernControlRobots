@@ -5,15 +5,20 @@ import numpy as np
 
 global current_behavior
 
+range_min = [200, 40, 40]
+range_max = [255, 70, 70]
 max_high = 80
 min_high = 10
-readyToOrbit = False
+find = False
 lenghtBall = 0
 closer = False
 numPixels = 0
 
 range_min = [200, 40, 40]
 range_max = [255, 70, 70]
+
+max_high_poles = 120
+min_high_poles = 80
 
 
 def convertInPixel(camera_name):
@@ -48,8 +53,7 @@ def isRed(pixel):
         return False
 
 def centering():
-    global numPixels
-    global closer
+    pixelsRight = camera_data_acquisition.cameraData["cam1"][640 * min_high:640 * max_high]
     pixelsLeft = camera_data_acquisition.cameraData["cam0"][640 * min_high:640 * max_high]
     left_bound = 49 * 4
     right_bound = 109 * 4
@@ -71,28 +75,24 @@ def centering():
             k += 4
     logMessage("lx: %s" % lx)
     logMessage("rx: %s" % rx)
-    numPixels = rx + lx
-    if numPixels > 920:
+    if rx + lx > 920:
         direction = "stop"
-        closer = True
     elif lx > rx+50:
         direction = "left"
     elif rx > lx+50:
         direction = "right"
     elif (lx > 0 or rx > 0):
         direction = "straight"
-    return  direction
+    return  direction, rx+lx
 
-def orbitalWalk():
-    global numPixels
-    global readyToOrbit
+def orbitalWalk(numPixels):
     pixelsRight = camera_data_acquisition.cameraData["cam1"][640 * min_high:640 * max_high]
     left_bound = 49 * 4
     right_bound = 109 * 4
     middle = 79*4
     high = max_high - min_high
     lx = 0
-    rx = 0
+    rx = 0 
     for j in range(high):
         i = left_bound + 640 * j
         k = middle + 640 * j
@@ -104,7 +104,7 @@ def orbitalWalk():
                 rx += 1
             i += 4
             k += 4
-    if abs(numPixels - (rx+lx)) > 50 and not readyToOrbit:
+    if abs(numPixels - (rx+lx)) > 50:
         direction = "right"
     else:
         if not readyToOrbit:
@@ -149,6 +149,7 @@ def testBehavior():
     min_high = 20
     horizontal = np.copy(cam["cam0"][640*min_high:640*max_high])
     filename = "prova.ppm"
+    logMessage("lungh %s" % len(horizontal))
     with open(filename, "w") as f:
         f.write("P3\n")
         f.write(str(160) + " " + str(40) + "\n")
@@ -163,7 +164,6 @@ def testBehavior():
             f.write("\n")
 
 def doBehavior(marsData):
-    global closer
     global current_behavior
     (left_cmd, right_cmd) = (0.0, 0.0)
     behavior = marsData["Config"]["Robot"]["behavior"]
@@ -175,17 +175,14 @@ def doBehavior(marsData):
         right_cmd = -5.0
     elif (current_behavior==1):
         left_cmd,right_cmd = pointTurn()
-        direction = centering()
+        direction, numPixels= centering()
+        logMessage("%s" % direction)
         if direction is not None:
-            left_cmd, right_cmd = moveToBall(direction)
-    elif (current_behavior == 2):
-        if closer == False:
-            left_cmd,right_cmd = pointTurn()
-            direction = centering()
-            if direction is not None:
+            if direction == "stop":
+                current_behavior = 2
+            else:
                 left_cmd, right_cmd = moveToBall(direction)
-        else:
-            direction = orbitalWalk()
-            left_cmd, right_cmd = moveToBall(direction)
-
+    elif (current_behavior == 2):
+        direction = orbitalWalk(direction, numPixels)
+        left_cmd, right_cmd = moveToBall(direction)
     return (left_cmd, right_cmd)
