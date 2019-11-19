@@ -11,6 +11,8 @@ max_high = 80
 min_high = 10
 find = False
 lenghtBall = 0
+max_high_poles = 120
+min_high_poles = 80
 
 
 def convertInPixel(camera_name):
@@ -138,6 +140,48 @@ def testBehavior():
                 f.write(str(int(horizontal[yy * 160 * 4 + x * 4 + 1] * 255)) + " ")
                 f.write(str(int(horizontal[yy * 160 * 4 + x * 4 + 2] * 255)) + " ")
             f.write("\n")
+
+
+def detectPole():
+    #side cam
+    pixelsRight = camera_data_acquisition.cameraData["cam1"][640 * min_high_poles:640 * max_high_poles]
+    #central cam
+    pixelsLeft = camera_data_acquisition.cameraData["cam0"][640 * min_high_poles:640 * max_high_poles]
+
+    high = max_high_poles - min_high_poles
+
+    left_bound = 0 * 4
+    right_bound = 160 * 4
+    middle = 79 * 4
+
+    rx = 0
+    lx = 0
+
+    direction = None
+    for j in range(high):
+        i = left_bound + 160*4 * j
+        k = middle + 160*4 * j
+        current_middle = middle + 160*4 * j
+        while i < current_middle:
+            if isRed(pixelsLeft[i:i + 3]):
+                lx += 1
+            if isRed(pixelsLeft[k:k + 3]):
+                rx += 1
+            i += 4
+            k += 4
+    logMessage("lx: %s" % lx)
+    logMessage("rx: %s" % rx)
+    if rx + lx > 100:
+        direction = "stop"
+    elif lx > rx:
+        direction = "left"
+    elif rx > lx:
+        direction = "right"
+    elif (lx > 0 or rx > 0):
+        direction = "straight"
+    return direction, rx + lx
+
+
 
 def doBehavior(marsData):
     global current_behavior
