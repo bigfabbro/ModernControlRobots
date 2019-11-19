@@ -5,12 +5,15 @@ import numpy as np
 
 global current_behavior
 
-range_min = [200, 40, 40]
-range_max = [255, 70, 70]
 max_high = 80
 min_high = 10
 find = False
 lenghtBall = 0
+closer = False
+numPixels = 0 
+
+range_min = [200, 40, 40]
+range_max = [255, 70, 70]
 
 
 def convertInPixel(camera_name):
@@ -45,7 +48,8 @@ def isRed(pixel):
         return False
 
 def centering():
-    pixelsRight = camera_data_acquisition.cameraData["cam1"][640 * min_high:640 * max_high]
+    global numPixels
+    global closer
     pixelsLeft = camera_data_acquisition.cameraData["cam0"][640 * min_high:640 * max_high]
     left_bound = 49 * 4
     right_bound = 109 * 4
@@ -69,15 +73,17 @@ def centering():
     logMessage("rx: %s" % rx)
     if rx + lx > 920:
         direction = "stop"
+        closer = True
     elif lx > rx+50:
         direction = "left"
     elif rx > lx+50:
         direction = "right"
     elif (lx > 0 or rx > 0):
         direction = "straight"
-    return  direction, rx+lx
+    return  direction
 
-def orbitalWalk(numPixels):
+def orbitalWalk():
+    global numPixels
     pixelsRight = camera_data_acquisition.cameraData["cam1"][640 * min_high:640 * max_high]
     left_bound = 49 * 4
     right_bound = 109 * 4
@@ -140,6 +146,7 @@ def testBehavior():
             f.write("\n")
 
 def doBehavior(marsData):
+    global closer
     global current_behavior
     (left_cmd, right_cmd) = (0.0, 0.0)
     behavior = marsData["Config"]["Robot"]["behavior"]
@@ -151,14 +158,20 @@ def doBehavior(marsData):
         right_cmd = -5.0
     elif (current_behavior==1):
         left_cmd,right_cmd = pointTurn()
-        direction, numPixels= centering()
+        direction = centering()
         logMessage("%s" % direction)
         if direction is not None:
-            if direction == "stop":
-                current_behavior = 2
-            else:
-                left_cmd, right_cmd = moveToBall(direction)
+            left_cmd, right_cmd = moveToBall(direction)
     elif (current_behavior == 2):
-        direction = orbitalWalk(direction, numPixels)
-        left_cmd, right_cmd = moveToBall(direction)
+        if closer == False:
+            left_cmd,right_cmd = pointTurn()
+            direction = centering()
+            logMessage("%s" % direction)
+            if direction is not None:
+                left_cmd, right_cmd = moveToBall(direction)
+        else:
+            logMessage("%s" % closer)
+            direction = orbitalWalk()
+            left_cmd, right_cmd = moveToBall(direction)
+        
     return (left_cmd, right_cmd)
