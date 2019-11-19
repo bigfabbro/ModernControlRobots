@@ -110,10 +110,8 @@ def orbitalWalk():
         if not readyToOrbit:
             readyToOrbit = True
         if numPixels < rx + lx:
-            logMessage("kingFaber")
             direction = "orbitRight"
         elif numPixels >= rx + lx:
-            logMessage("serGuidotti")
             direction = "orbitLeft"
         else:
             direction = "orbit"
@@ -134,7 +132,7 @@ def moveToBall(direction):
         left_cmd = -2.
         right_cmd = -0.5
     elif direction == "orbitLeft":
-        left_cmd = -1.85
+        left_cmd = -1.6
         right_cmd = -2.
     elif direction == "orbit":
         left_cmd = -1.
