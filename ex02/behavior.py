@@ -7,16 +7,19 @@ global current_behavior
 
 high = 120
 width = 160
+find_pole = False
 pixelComponents = 4
-max_high = 80
-min_high = 10
+max_high_ball = 80
+min_high_ball = 10
+max_high_pole = 120
+min_high_pole = 80
 readyToOrbit = False
 lenghtBall = 0
 closer = False
 numPixels = 0
 
-range_min_red = [200, 40, 40]
-range_max_red = [255, 70, 70]
+range_min_red = [150, 40, 40]
+range_max_red = [255, 110, 130]
 
 range_min_green = [200, 40, 40]
 range_max_green = [255, 70, 70]
@@ -38,6 +41,7 @@ def pointTurn():
     return left_cmd, right_cmd
 
 def isColor(pixel, color):
+    global range_max_red, range_max_blue, range_max_green, range_max_yellow
     range_min = [0,0,0]
     range_max = [255,255,255]
     if color == "red":
@@ -59,14 +63,25 @@ def isColor(pixel, color):
     else:
         return False
 
-def sidePixelNumber(camera, color_of_ball):
-    global width
+def sidePixelNumber(camera, shape, color):
+    global width, high
     global pixelComponents
-    global min_high
-    global max_high
-    pixels = camera_data_acquisition.cameraData[camera][width*pixelComponents*min_high:width*pixelComponents*max_high]
-    left_bound = 49 * 4
+    global min_high_ball, max_high_ball
+    global min_high_pole, max_high_pole
+
+    if shape == "ball":
+        max_high = max_high_ball
+        min_high = min_high_ball
+        left_bound = 49 * 4
+    elif shape == "pole":
+        max_high = max_high_pole
+        min_high = min_high_pole
+        left_bound = (width/2 - 25 - 1) * 4
+    else:
+        max_high = high
+        min_high = 0
     middle = (width/2 - 1) * 4
+    pixels = camera_data_acquisition.cameraData[camera][width*pixelComponents*min_high:width*pixelComponents*max_high]
     slice_high = max_high - min_high
     rx = 0
     lx = 0
@@ -75,19 +90,19 @@ def sidePixelNumber(camera, color_of_ball):
         k = middle + 640 * j
         current_middle = middle + 640 * j
         while i < current_middle:
-            if isColor(pixels[i:i + 3], color_of_ball):
+            if isColor(pixels[i:i + 3], color):
                 lx += 1
-            if isColor(pixels[k:k + 3], color_of_ball):
+            if isColor(pixels[k:k + 3], color):
                 rx += 1
             i += pixelComponents
             k += pixelComponents
     return lx, rx
 
-def centering(color_of_ball):
+def approachBall(color_of_ball):
     global numPixels
     global closer
     direction = None
-    lx, rx = sidePixelNumber("cam0", color_of_ball)
+    lx, rx = sidePixelNumber("cam0", "ball", color_of_ball)
     numPixels = rx + lx
     if numPixels > 920:
         direction = "stop"
@@ -103,7 +118,7 @@ def centering(color_of_ball):
 def orbitalWalk(color_of_ball):
     global numPixels
     global readyToOrbit
-    lx, rx = sidePixelNumber("cam1", color_of_ball)
+    lx, rx = sidePixelNumber("cam1", "ball", color_of_ball)
     if abs(numPixels - (rx+lx)) > 50 and not readyToOrbit:
         direction = "right"
     else:
@@ -117,7 +132,15 @@ def orbitalWalk(color_of_ball):
             direction = "orbit"
     return direction
 
-
+def detectPole(color_of_pole):
+    global find_pole
+    global readyToOrbit
+    lx, rx = sidePixelNumber("cam1", "pole", color_of_pole)
+    logMessage("lxpole: %s" % lx)
+    logMessage("rxpole: %s" % rx)
+    if (rx > 0 or lx > 0):
+        find_pole = True
+    
 def move(direction):
     right_cmd = -5.
     left_cmd = -5.
@@ -132,8 +155,8 @@ def move(direction):
         left_cmd = -4.
         right_cmd = -3.4
     elif direction == "orbitLeft":
-        left_cmd = -3.4
-        right_cmd = -4.
+        left_cmd = -3.4 
+        right_cmd = -4. 
     elif direction == "orbit":
         left_cmd = -1.
         right_cmd = -1.
@@ -171,17 +194,30 @@ def doBehavior(marsData):
         right_cmd = -5.0
     elif (current_behavior==1):
         left_cmd,right_cmd = pointTurn()
-        direction = centering("red")
+        direction = approachBall("red")
         if direction is not None:
             left_cmd, right_cmd = move(direction)
     elif (current_behavior == 2):
         if closer == False:
             left_cmd,right_cmd = pointTurn()
-            direction = centering("red")
+            direction = approachBall("red")
             if direction is not None:
                 left_cmd, right_cmd = move(direction)
         else:
             direction = orbitalWalk("red")
+            left_cmd, right_cmd = move(direction)
+    elif (current_behavior == 3):
+        if closer == False:
+            left_cmd,right_cmd = pointTurn()
+            direction = approachBall("red")
+            if direction is not None:
+                left_cmd, right_cmd = move(direction)
+        else:
+            direction = orbitalWalk("red")
+            if readyToOrbit:
+                detectPole("red")
+            if (find_pole):
+                direction = "stop"
             left_cmd, right_cmd = move(direction)
 
     return (left_cmd, right_cmd)
