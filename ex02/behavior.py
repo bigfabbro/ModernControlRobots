@@ -1,125 +1,99 @@
 from mars_interface import *
 import random
+import time
 import camera_data_acquisition
 import numpy as np
-import time
 
 global current_behavior
 
-# config variables
 high = 120
 width = 160
 pixelComponents = 4
+
 max_high_ball = 60
-min_high_ball = 23
-max_high_pole = 120
-min_high_pole = 65
+min_high_ball = 24
+max_high_pole = 110
+min_high_pole = 70
 
-range_min_red = [150, 40, 40]
-range_max_red = [256, 130, 130]
-
-range_min_green = [40, 200, 40]
-range_max_green = [140, 256, 140]
-
-range_min_blue = [20, 20, 150]
-range_max_blue = [100, 100, 256]
-
-range_min_yellow = [135, 135, 10]
-range_max_yellow = [256, 256, 70]
-
-# global variables
-muchRight = 0.
-muchLeft = 0.
-onlyRight = 1
-readyToOrbit = False
-lenghtBall = 0
-closer = False
 numPixels = 0
+hitting = 0
+hit = False
+readyToOrbit = False
+readyToHit = False
 find_pole = False
-right_direction = False
-color = "yellow"
-kicking = False
-tempkicking = 0
-tempwaiting = 0
+closer = False
+start = True
+
+colours = ["red", "green", "blue", "yellow"]
+
+# configuration parameters in this order: R_min, G_min, B_min, R_max, G_max, B_max, dist_appr, pixel_rot
+red = [150, 40, 40, 255, 130, 130, 230, 40, 40, 255, 80, 80, 900, 40]
+blue = [20, 20, 135, 100, 100, 255, 40, 40, 90, 120, 140, 255, 750, 50]
+green = [40, 200, 40, 140, 255, 140, 40, 150, 40, 180, 255, 180, 900, 50]
+yellow = [135, 135, 10, 255, 255, 70, 120, 120, 10, 255, 255, 150, 900, 50]
+dist_appr = 0
+pixel_rot = 0
+
+range_min_ball = None
+range_max_ball = None
+range_min_pole = None
+range_max_pole = None
 
 
 def initialBehavior():
     global current_behavior
     current_behavior = 0
 
+def setParameters(colour):
+    global range_min_ball, range_max_ball, range_max_pole, range_min_pole
+    global dist_appr, pixel_rot
+    global red, blue, green, yellow
+    global readyToOrbit, readyToHit, closer, hit, hitting, find_pole, start
 
-def pointTurn():
-    left_cmd = 0.
-    right_cmd = -3.
-    return left_cmd, right_cmd
-
-
-def slowPointTurn():
-    left_cmd = 1.0
-    right_cmd = -1.0
-    return left_cmd, right_cmd
-
-
-def isColorBall(pixel, color):
-    global range_max_red, range_max_blue, range_max_green, range_max_yellow
-    range_min = [0, 0, 0]
-    range_max = [256, 256, 256]
-    if color == "red":
-        range_min = range_min_red
-        range_max = range_max_red
-    elif color == "green":
-        range_min = range_min_green
-        range_max = range_max_green
-    elif color == "blue":
-        range_min = range_min_blue
-        range_max = range_max_blue
-    elif color == "yellow":
-        range_min = range_min_yellow
-        range_max = range_max_yellow
-    pixel = [pixel[0] * 255, pixel[1] * 255, pixel[2] * 255]
-    if pixel[0] > range_min[0] and pixel[0] < range_max[0] and pixel[1] > range_min[1] and pixel[1] < range_max[1] \
-            and pixel[2] > range_min[2] and pixel[2] < range_max[2]:
-        return True
+    if colour == "blue":
+        array = blue
+    elif colour == "green":
+        array = green
+    elif colour == "yellow":
+        array = yellow
     else:
-        return False
+        array = red
+
+    range_min_ball = array[0:3]
+    range_max_ball = array[3:6]
+    range_min_pole = array[6:9]
+    range_max_pole = array[9:12]
+    dist_appr = array[12]
+    pixel_rot = array[13]
 
 
-def isColorPole(pixel, color):
-    range_min_red = [230, 40, 40]
-    range_max_red = [256, 80, 80]
+def reset():
+    global hitting, hit, readyToHit, readyToOrbit, find_pole, closer, start
+    hitting = 0
+    hit = False
+    readyToOrbit = False
+    readyToHit = False
+    find_pole = False
+    closer = False
+    start = True
 
-    range_min_green = [40, 150, 40]
-    range_max_green = [180, 256, 180]
-
-    range_min_blue = [20, 20, 130]
-    range_max_blue = [100, 130, 256]
-
-    range_min_yellow = [120, 120, 10]
-    range_max_yellow = [256, 256, 150]
-
-    range_min = [0, 0, 0]
-    range_max = [256, 256, 256]
-    if color == "red":
-        range_min = range_min_red
-        range_max = range_max_red
-    elif color == "green":
-        range_min = range_min_green
-        range_max = range_max_green
-    elif color == "blue":
-        range_min = range_min_blue
-        range_max = range_max_blue
-    elif color == "yellow":
-        range_min = range_min_yellow
-        range_max = range_max_yellow
-    pixel = [pixel[0] * 255, pixel[1] * 255, pixel[2] * 255]
-    if pixel[0] > range_min[0] and pixel[0] < range_max[0] and pixel[1] > range_min[1] and pixel[1] < range_max[1] \
-            and pixel[2] > range_min[2] and pixel[2] < range_max[2]:
-        return True
+def isColor(pixel, shape):
+    global range_min_ball, range_max_ball, range_min_pole, range_max_pole
+    pixel = [pixel[0]*255, pixel[1]*255, pixel[2]*255]
+    if shape == "ball":
+        if pixel[0] >= range_min_ball[0] and pixel[0] <= range_max_ball[0] and pixel[1] >= range_min_ball[1] and pixel[1] <= range_max_ball[1]\
+        and pixel[2] >= range_min_ball[2] and pixel[2] <= range_max_ball[2]:
+            return True
+        else:
+            return False
     else:
-        return False
+        if pixel[0] >= range_min_pole[0] and pixel[0] <= range_max_pole[0] and pixel[1] >= range_min_pole[1]\
+        and pixel[1] <=range_max_pole[1] and pixel[2] >= range_min_pole[2] and pixel[2] <= range_max_pole[2]:
+            return True
+        else:
+            return False
 
-
-def pixelNumber(camera, shape, color, colorFunction):
+def sidePixelNumber(camera, shape, color = None):
     global width, high
     global pixelComponents
     global min_high_ball, max_high_ball
@@ -132,13 +106,12 @@ def pixelNumber(camera, shape, color, colorFunction):
     elif shape == "pole":
         max_high = max_high_pole
         min_high = min_high_pole
-        left_bound = (width / 2 - 20 - 1) * 4
+        left_bound = (width/2 - 5 - 1) * 4
     else:
         max_high = high
         min_high = 0
-    middle = (width / 2 - 1) * 4
-    pixels = camera_data_acquisition.cameraData[camera][
-             width * pixelComponents * min_high:width * pixelComponents * max_high]
+    middle = (width/2 - 1) * 4
+    pixels = camera_data_acquisition.cameraData[camera][width*pixelComponents*min_high:width*pixelComponents*max_high]
     slice_high = max_high - min_high
     rx = 0
     lx = 0
@@ -147,261 +120,169 @@ def pixelNumber(camera, shape, color, colorFunction):
         k = middle + 640 * j
         current_middle = middle + 640 * j
         while i < current_middle:
-            if colorFunction(pixels[i:i + 3], color):
+            if isColor(pixels[i:i + 3], shape):
                 lx += 1
-            if colorFunction(pixels[k:k + 3], color):
+            if isColor(pixels[k:k + 3], shape):
                 rx += 1
             i += pixelComponents
             k += pixelComponents
     return lx, rx
 
+def pointTurn():
+    left_cmd  = -2.
+    right_cmd = 2.
+    return left_cmd, right_cmd
 
-def _approachBall(color_of_ball):
+def approachBall(lx,rx):
     global numPixels
     global closer
     global onlyRight
-    direction = None
-    lx, rx = pixelNumber("cam0", "ball", color_of_ball, isColorBall)
-    logMessage(str(rx + lx))
-    numPixels = rx + lx
-    onlyRight = rx
-    if color_of_ball == "red":
-        limit = 1000
-    elif color_of_ball == "green":
-        limit = 1000
-    elif color_of_ball == "blue":
-        limit = 900
-    else:
-        limit = 1000
-    if numPixels > limit:
-        direction = "stop"
-        logMessage("NumPixelAllArrivo %s" % numPixels)
+    global dist_appr
+    if numPixels > dist_appr:
+        left_cmd = 0.
+        right_cmd = 0.
         closer = True
-    elif lx > rx + 50:
-        direction = "left"
-    elif rx > lx + 50:
-        direction = "right"
+    elif lx > rx+50:
+        left_cmd = 0.
+        right_cmd = -5.
+    elif rx > lx+50:
+        left_cmd = -5.
+        right_cmd = 0.
     elif (lx > 0 or rx > 0):
-        direction = "straight"
-    return direction
-
-
-def _orbitalWalk(color_of_ball):
-    global numPixels
-    global readyToOrbit
-    global left_cmd
-    global right_cmd
-    left_cmd = 0
-    right_cmd = 0
-    # time.sleep(0.080)
-    lx, rx = pixelNumber("cam1", "ball", color_of_ball, isColorBall)
-
-    logMessage("Pixeldestra: %s" % rx)
-    logMessage("Pixelsinistra: %s" % lx)
-
-    totali = lx + rx
-    logMessage("PixelTotali: %s" % totali)
-
-    if lx + rx <= numPixels and not readyToOrbit:
-        direction = "right"
-    else:
-        if not readyToOrbit:
-            logMessage("COMINCIO A RUOTARE INTORNO ALLA PALLA")
-            readyToOrbit = True
-
-        if abs(totali - numPixels) <= 75:
-            if rx > onlyRight:
-                logMessage("Mi allontano")
-                direction = "orbitRight"
-                muchRight = (rx - onlyRight) / (onlyRight + 1)
-            else:
-                logMessage("Rientro")
-                direction = "orbitLeft"
-                muchLeft = (rx - onlyRight) / (onlyRight + 1)
-        else:
-            if totali >= numPixels:
-                logMessage("Mi allontano")
-                direction = "orbitRight"
-                muchRight = (totali - numPixels) / (totali + 1)
-            if totali < numPixels:
-                logMessage("Mi rientro")
-                direction = "orbitLeft"
-                muchLeft = (totali - numPixels) / (totali + 1)
-    return direction
-
-
-def detectPole(color_of_pole, cam):
-    global find_pole
-    global readyToOrbit
-    global right_direction
-    lx, rx = pixelNumber(cam, "pole", color_of_pole, isColorPole)
-    logMessage("lxpole: %s" % lx)
-    logMessage("rxpole: %s" % rx)
-    if (rx > 0 or lx > 0 and cam == "cam1"):
-        find_pole = True
-    elif (rx > 0 or lx > 0 and cam == "cam0"):
-        right_direction = True
-
-
-def move(direction):
-    right_cmd = -5.
-    left_cmd = -5.
-    if direction == "right":
-        right_cmd = 0.
-    elif direction == "left":
-        left_cmd = 0.
-    elif direction == "stop":
-        left_cmd = 0.
-        right_cmd = 0.
-    elif direction == "orbitRight":
-        left_cmd = -2.8
-        right_cmd = -2.3 + (muchRight / 2.3)
-    elif direction == "orbitLeft":
-        left_cmd = -2.1 - (muchLeft / 2.1)
-        right_cmd = -2.8
-    elif direction == "orbit":
-        left_cmd = -1.
-        right_cmd = -1.
+        left_cmd = -5.
+        right_cmd = -5.
     return left_cmd, right_cmd
 
+def orbitalWalk(lx,rx):
+    global numPixels
+    global readyToOrbit
+    global pixel_rot
 
-def testBehavior():
-    cam = camera_data_acquisition.cameraData
-    max_high = 60
-    min_high = 20
-    horizontal = np.copy(cam["cam0"][640 * min_high:640 * max_high])
-    filename = "prova.ppm"
-    with open(filename, "w") as f:
-        f.write("P3\n")
-        f.write(str(160) + " " + str(40) + "\n")
-        f.write("255\n")
-        for y in range(40):
-            yy = 40 - 1 - y
-            for x in range(160):
-                # Each pixel has three components Red Green and Blue
-                f.write(str(int(horizontal[yy * 160 * 4 + x * 4] * 255)) + " ")
-                f.write(str(int(horizontal[yy * 160 * 4 + x * 4 + 1] * 255)) + " ")
-                f.write(str(int(horizontal[yy * 160 * 4 + x * 4 + 2] * 255)) + " ")
-            f.write("\n")
+    if lx+rx < numPixels - pixel_rot and not readyToOrbit:
+        left_cmd = -1.
+        right_cmd = 1.
+    else:
+        if not readyToOrbit:
+            readyToOrbit = True
+        if lx > rx:
+            left_cmd = -2.1
+            right_cmd = -2.8 - (lx + rx )/numPixels
+        else:
+            left_cmd = -2.8 - (lx + rx)/ numPixels
+            right_cmd = -2.3
+    return left_cmd, right_cmd
 
+def hitBall(lx, rx):
+    global readyToHit, hit
+    global numPixels
+    if lx + rx < numPixels - pixel_rot and not readyToHit:
+        left_cmd = 1.
+        right_cmd = -3.
+    else:
+        if not readyToHit:
+            readyToHit = True
+        left_cmd = -8.
+        right_cmd = -8.
+        hit = True
+    return left_cmd, right_cmd
+
+def detectPole(lp, rp):
+    global find_pole
+    if (rp >0 or lp > 0):
+        find_pole = True
+
+def selectColorBall():
+    global colours
+    values = []
+    for colour in colours:
+        setParameters(colour)
+        lx, rx = sidePixelNumber("cam0", "ball")
+        values.append([lx + rx, colour])
+    values.sort(key=lambda x: x[0], reverse=True)
+    logMessage("%s" % values)
+    return values[0]
+
+
+def approachRedBall():
+    global start
+    global numPixels
+    if start:
+        setParameters("red")
+        start = False
+    left_cmd, right_cmd = pointTurn()
+    lx, rx = sidePixelNumber("cam0", "ball")
+    numPixels = rx + lx
+    if numPixels > 0:
+        left_cmd, right_cmd = approachBall(lx, rx)
+    return left_cmd, right_cmd
+
+def orbitRedBall():
+    global closer
+    if not closer:
+        left_cmd, right_cmd = approachRedBall()
+    else:
+        lx, rx = sidePixelNumber("cam1", "ball")
+        left_cmd, right_cmd = orbitalWalk(lx, rx)
+    return left_cmd, right_cmd
+
+def storeTheBalls():
+    global start, find_pole, hit
+    global hitting, numPixels
+    if start:
+        colour = selectColorBall()
+        if colour[0] > 5:
+            setParameters(colour[1])
+            start = False
+        else:
+            left_cmd = -2.
+            right_cmd = 2.
+    if not closer:
+        lx, rx = sidePixelNumber("cam0", "ball")
+        left_cmd, right_cmd = pointTurn()
+        numPixels = rx + lx
+        if (numPixels > 0):
+            left_cmd, right_cmd = approachBall(lx, rx)
+    else:
+        if not find_pole:
+            lx, rx = sidePixelNumber("cam1", "ball")
+            left_cmd, right_cmd = orbitalWalk(lx, rx)
+        if readyToOrbit:
+            lp, rp = sidePixelNumber("cam1", "pole")
+            detectPole(lp, rp)
+            if find_pole:
+                lx, rx = sidePixelNumber("cam0", "ball")
+                left_cmd, right_cmd = hitBall(lx, rx)
+                if hit:
+                    hitting += 1
+                    if hitting < 250:
+                        left_cmd = -8.
+                        right_cmd = -8.
+                    elif hitting < 400:
+                        left_cmd = -2.
+                        right_cmd = 2.
+                    else:
+                        reset()
+    return left_cmd, right_cmd
 
 def doBehavior(marsData):
-    global closer
-    global current_behavior
+    global closer, hitting
+    global current_behavior, numPixels
+    global readyToOrbit, readyToHit
+    global start, hit
     (left_cmd, right_cmd) = (0.0, 0.0)
     behavior = marsData["Config"]["Robot"]["behavior"]
-    if (behavior != current_behavior):
-        logMessage("Switching to behavior: " + str(behavior))
+    if behavior != current_behavior:
+        logMessage("Switching to behavior: "+str(behavior))
         current_behavior = behavior
-    if (current_behavior == 3):
+    if current_behavior == 0:
         left_cmd = -5.0
         right_cmd = -5.0
-    elif (current_behavior == 1):
-        left_cmd, right_cmd = approachBall("red")
-    elif (current_behavior == 2):
-        left_cmd, right_cmd = orbitRedBall()
-    elif (current_behavior == 0):
-        left_cmd, right_cmd = storeBalls()
-
+    elif current_behavior == 1:
+       left_cmd, right_cmd = approachRedBall()
+    elif current_behavior == 2:
+      left_cmd, right_cmd = orbitRedBall()
+    elif (current_behavior == 3):
+        left_cmd, right_cmd = storeTheBalls()
     return (left_cmd, right_cmd)
 
 
-def storeBalls():
-    global find_pole
-    global right_direction
-    global numPixels
-    global closer
-    global color
-    global readyToOrbit
-    global kicking
-    global tempkicking
-    global tempwaiting
-
-    if kicking == True:
-        # routine se sto kickando
-
-        # Continuo ad andare avanti a 100 un po
-        if tempkicking <= 100:
-            tempkicking = tempkicking + 1
-            left_cmd = -100.
-            right_cmd = -100.
-
-        else:
-            if tempwaiting <= 400:
-                tempwaiting = tempwaiting + 1
-                left_cmd = -1.
-                right_cmd = 1.
-            else:
-                left_cmd = 0.
-                right_cmd = 0.
-                kicking = False
-
-    else:
-        if color is None:
-            color = selectColorBall()
-        logMessage(color)
-        if closer == False:
-            left_cmd, right_cmd = approachBall(color)
-            lx, rx = pixelNumber("cam0", "ball", color, isColorBall)
-            catchedPixel = rx + lx
-            if catchedPixel == 0:
-                readyToOrbit = False
-                closer = False
-                find_pole = False
-                right_direction = False
-                color = None
-            logMessage("approaching ball")
-        else:
-            direction = _orbitalWalk(color)
-            left_cmd, right_cmd = move(direction)
-            logMessage("Orbiting")
-            if readyToOrbit:
-                detectPole(color, "cam1")
-                logMessage("orbiting searching for a pole")
-                if (find_pole and not right_direction):
-                    detectPole(color, "cam0")
-                    logMessage("right angle found searching the pole")
-                    left_cmd, right_cmd = slowPointTurn()
-                if (find_pole and right_direction):
-                    left_cmd = -100.0
-                    right_cmd = -100.0
-                    lx, rx = pixelNumber("cam0", "ball", color, isColorBall)
-                    catchedPixel = rx + lx
-                    logMessage("kicking the ball")
-                    kicking = True
-                    tempkicking = 0
-                    tempwaiting = 0
-                    readyToOrbit = False
-                    closer = False
-                    find_pole = False
-                    right_direction = False
-                    color = None
-    return left_cmd, right_cmd
-
-
-def selectColorBall():
-    lxRed, rxRed = pixelNumber("cam0", "ball", "red", isColorBall)
-    lxGreen, rxGreen = pixelNumber("cam0", "ball", "green", isColorBall)
-    lxBlue, rxBlue = pixelNumber("cam0", "ball", "blue", isColorBall)
-    lxYellow, rxYellow = pixelNumber("cam0", "ball", "yellow", isColorBall)
-    colors = [[lxRed + rxRed, "red"], [lxGreen + rxGreen, "green"], [lxBlue + rxBlue, "blue"],
-              [lxYellow + rxYellow, "yellow"]]
-    colors.sort(key=lambda x: x[0], reverse=True)
-    return colors[0][1]
-
-
-def orbitRedBall():
-    if closer == False:
-        left_cmd, right_cmd = approachBall("red")
-    else:
-        direction = _orbitalWalk("red")
-        left_cmd, right_cmd = move(direction)
-    return left_cmd, right_cmd
-
-
-def approachBall(color):
-    left_cmd, right_cmd = pointTurn()
-    direction = _approachBall(color)
-    if direction is not None:
-        left_cmd, right_cmd = move(direction)
-    return left_cmd, right_cmd
