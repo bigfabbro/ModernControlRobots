@@ -11,10 +11,11 @@ width = 160
 find_pole = False
 pixelComponents = 4
 max_high_ball = 80
-min_high_ball = 10
+min_high_ball = 25
 max_high_pole = 120
-min_high_pole = 80
+min_high_pole = 70
 readyToOrbit = False
+readyToHit = False
 lenghtBall = 0
 closer = False
 numPixels = 0
@@ -29,8 +30,8 @@ range_max_red = [255, 110, 130]
 range_min_green = [200, 40, 40]
 range_max_green = [255, 70, 70]
 
-range_min_blue = [200, 40, 40]
-range_max_blue = [255, 70, 70]
+range_min_blue = [30, 30, 120]
+range_max_blue = [90, 90, 255]
 
 range_min_yellow = [200, 40, 40]
 range_max_yellow = [255, 70, 70]
@@ -81,7 +82,7 @@ def sidePixelNumber(camera, shape, color):
     elif shape == "pole":
         max_high = max_high_pole
         min_high = min_high_pole
-        left_bound = (width/2 - 25 - 1) * 4
+        left_bound = (width/2 - 15 - 1) * 4
     else:
         max_high = high
         min_high = 0
@@ -111,7 +112,7 @@ def approachBall(color_of_ball):
     lx, rx = sidePixelNumber("cam0", "ball", color_of_ball)
     numPixels = rx + lx
     onlyRight = rx
-    if numPixels > 920:
+    if numPixels > 600:
         direction = "stop"
         logMessage("NumPixelAllArrivo %s" % numPixels)
         closer = True
@@ -123,7 +124,7 @@ def approachBall(color_of_ball):
         direction = "straight"
     return direction
 
-def orbitalWalk(color_of_ball):
+def orbitalWalk(camera,color_of_ball):
     global numPixels
     global readyToOrbit
     global left_cmd
@@ -131,15 +132,20 @@ def orbitalWalk(color_of_ball):
     left_cmd = 0
     right_cmd = 0
     #time.sleep(0.080)
-    lx, rx = sidePixelNumber("cam1", "ball", color_of_ball)
+    lx, rx = sidePixelNumber(camera, "ball", color_of_ball)
   
     logMessage("Pixeldestra: %s" % rx)
     logMessage("Pixelsinistra: %s" % lx)
     
     totali = lx + rx
     logMessage("PixelTotali: %s" %totali)
-    if lx+rx <= numPixels and not readyToOrbit:
-        direction = "right"
+    logMessage("Numpixels: %s" %numPixels)
+    if lx+rx < numPixels - 50 and not readyToOrbit:
+        if camera == "cam1":
+            direction = "rotationRight"
+        else:
+            direction = "rotationLeft"
+
     else:
         if not readyToOrbit:
             logMessage("COMINCIO A RUOTARE INTORNO ALLA PALLA")
@@ -193,6 +199,15 @@ def move(direction):
     elif direction == "orbit":
         left_cmd = -1.
         right_cmd = -1.
+    elif direction == "rotationLeft":
+        left_cmd = 1.
+        right_cmd = -1.
+    elif direction == "rotationRight":
+        left_cmd = -1.
+        right_cmd = 1.
+    elif direction == "hitBall":
+        left_cmd = -5.
+        right_cmd = -5.
     return left_cmd, right_cmd
 
 def testBehavior():
@@ -217,12 +232,13 @@ def testBehavior():
 def doBehavior(marsData):
     global closer
     global current_behavior
+    global readyToOrbit, readyToHit
     (left_cmd, right_cmd) = (0.0, 0.0)
     behavior = marsData["Config"]["Robot"]["behavior"]
     if (behavior != current_behavior):
         logMessage("Switching to behavior: "+str(behavior))
         current_behavior = behavior
-    if (current_behavior == 2):
+    if (current_behavior == 0):
         left_cmd = -5.0
         right_cmd = -5.0
     elif (current_behavior==1):
@@ -230,7 +246,7 @@ def doBehavior(marsData):
         direction = approachBall("red")
         if direction is not None:
             left_cmd, right_cmd = move(direction)
-    elif (current_behavior == 0):
+    elif (current_behavior == 2):
         if closer == False:
             left_cmd,right_cmd = pointTurn()
             direction = approachBall("red")
@@ -242,15 +258,21 @@ def doBehavior(marsData):
     elif (current_behavior == 3):
         if closer == False:
             left_cmd,right_cmd = pointTurn()
-            direction = approachBall("red")
+            direction = approachBall("blue")
             if direction is not None:
                 left_cmd, right_cmd = move(direction)
         else:
-            direction = orbitalWalk("red")
+            direction = orbitalWalk("cam1","blue")
             if readyToOrbit:
-                detectPole("red")
-            if (find_pole):
-                direction = "stop"
+                detectPole("blue")
+                if (find_pole):
+                    readyToHit = True
+                    readyToOrbit = False
+                    direction = "stop"
+            if readyToHit:
+                direction = orbitalWalk("cam0","blue")
+                if readyToOrbit:
+                    direction = "hitBall"
             left_cmd, right_cmd = move(direction)
 
     return (left_cmd, right_cmd)
