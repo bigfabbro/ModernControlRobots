@@ -1,5 +1,6 @@
 from mars_interface import *
 import random
+import time
 import camera_data_acquisition
 import numpy as np
 
@@ -17,6 +18,10 @@ readyToOrbit = False
 lenghtBall = 0
 closer = False
 numPixels = 0
+onlyRight = 0
+
+muchRight = 0.
+muchLeft = 0.
 
 range_min_red = [150, 40, 40]
 range_max_red = [255, 110, 130]
@@ -57,8 +62,8 @@ def isColor(pixel, color):
         range_min = range_min_yellow
         range_max = range_min_yellow
     pixel = [pixel[0]*255, pixel[1]*255, pixel[2]*255]
-    if pixel[0] >range_min[0] and pixel[0] < range_max[0] and pixel[1] > range_min[1] and pixel[1] < range_max[1]\
-        and pixel[2] > range_min[2] and pixel[2] < range_max[2]:
+    if pixel[0] >= range_min[0] and pixel[0] <= range_max[0] and pixel[1] >= range_min[1] and pixel[1] <= range_max[1]\
+        and pixel[2] >= range_min[2] and pixel[2] <= range_max[2]:
         return True
     else:
         return False
@@ -101,11 +106,14 @@ def sidePixelNumber(camera, shape, color):
 def approachBall(color_of_ball):
     global numPixels
     global closer
+    global onlyRight
     direction = None
     lx, rx = sidePixelNumber("cam0", "ball", color_of_ball)
     numPixels = rx + lx
+    onlyRight = rx
     if numPixels > 920:
         direction = "stop"
+        logMessage("NumPixelAllArrivo %s" % numPixels)
         closer = True
     elif lx > rx+50:
         direction = "left"
@@ -118,26 +126,51 @@ def approachBall(color_of_ball):
 def orbitalWalk(color_of_ball):
     global numPixels
     global readyToOrbit
+    global left_cmd
+    global right_cmd
+    left_cmd = 0
+    right_cmd = 0
+    #time.sleep(0.080)
     lx, rx = sidePixelNumber("cam1", "ball", color_of_ball)
-    if abs(numPixels - (rx+lx)) > 50 and not readyToOrbit:
+  
+    logMessage("Pixeldestra: %s" % rx)
+    logMessage("Pixelsinistra: %s" % lx)
+    
+    totali = lx + rx
+    logMessage("PixelTotali: %s" %totali)
+    if lx+rx <= numPixels and not readyToOrbit:
         direction = "right"
     else:
         if not readyToOrbit:
+            logMessage("COMINCIO A RUOTARE INTORNO ALLA PALLA")
             readyToOrbit = True
-        if numPixels < rx + lx:
-            direction = "orbitRight"
-        elif numPixels >= rx + lx:
-            direction = "orbitLeft"
+        
+        if abs(totali-numPixels) <= 125:
+            if rx > onlyRight:
+                logMessage("Mi allontano")
+                direction = "orbitRight"
+                muchRight = (rx-onlyRight)/onlyRight
+            else:
+                logMessage("Rientro")
+                direction = "orbitLeft"
+                muchLeft = (rx-onlyRight)/onlyRight
         else:
-            direction = "orbit"
+            if totali >= numPixels:
+                logMessage("Mi allontano")
+                direction = "orbitRight"
+                muchRight = (totali-numPixels)/totali
+            if totali < numPixels:
+                logMessage("Mi rientro")
+                direction = "orbitLeft"
+                muchLeft = (totali-numPixels)/totali
     return direction
 
 def detectPole(color_of_pole):
     global find_pole
     global readyToOrbit
     lx, rx = sidePixelNumber("cam1", "pole", color_of_pole)
-    logMessage("lxpole: %s" % lx)
-    logMessage("rxpole: %s" % rx)
+    #logMessage("lxpole: %s" % lx)
+    #logMessage("rxpole: %s" % rx)
     if (rx > 0 or lx > 0):
         find_pole = True
     
@@ -152,11 +185,11 @@ def move(direction):
         left_cmd = 0.
         right_cmd = 0.
     elif direction == "orbitRight":
-        left_cmd = -4.
-        right_cmd = -3.4
+        left_cmd = -2.8
+        right_cmd = -2.3 + (muchRight/2.3)
     elif direction == "orbitLeft":
-        left_cmd = -3.4 
-        right_cmd = -4. 
+        left_cmd = -2.1 - (muchLeft/2.1)
+        right_cmd = -2.8 
     elif direction == "orbit":
         left_cmd = -1.
         right_cmd = -1.
@@ -189,7 +222,7 @@ def doBehavior(marsData):
     if (behavior != current_behavior):
         logMessage("Switching to behavior: "+str(behavior))
         current_behavior = behavior
-    if (current_behavior == 0):
+    if (current_behavior == 2):
         left_cmd = -5.0
         right_cmd = -5.0
     elif (current_behavior==1):
@@ -197,7 +230,7 @@ def doBehavior(marsData):
         direction = approachBall("red")
         if direction is not None:
             left_cmd, right_cmd = move(direction)
-    elif (current_behavior == 2):
+    elif (current_behavior == 0):
         if closer == False:
             left_cmd,right_cmd = pointTurn()
             direction = approachBall("red")
