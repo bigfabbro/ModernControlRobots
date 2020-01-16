@@ -20,8 +20,12 @@ first_time = True
 - basePos: base positions of the lasers
 - directions: directions of the lasers
 - alphas: robot-specific error parameters, which specify the error accrued with motion (in this case randomly chosen)
+- search: two possible values "global" and "local". If global the particles are positioned all around the map. 
+          If local the particles are positioned in the environment around the wheelchair.
+- angle: two possible values "random" and "fixed". If random the particles are generated with random orientation. 
+        If fixed the particles are generated with an orientation chosen between fixed angles. 
 """
-map_size_x = 7
+map_size_x = 8
 map_size_y = 6
 laser_max_range = 4.
 update_time = 0.02
@@ -34,7 +38,9 @@ basePos = np.array([[0.320234, 0.230233],
                     [-0.306395, 0.214315],
                     [-0.306395, -0.214316]])
 directions = np.array([0.262, -1.309, 1.833, -2.879])
-alphas = [0.2, 0.2, 1., 1.]
+alphas = [2, 1.5, 1, 1]
+search = "global"
+angle = "fixed"
 
 #######################################################################################################################
 particles =[]
@@ -56,8 +62,9 @@ def dist(p1, p2):
 
 #please use this function to set the number of particles
 #(initializes the array to draw the particles)
+
 def getNumberOfParticles():
-    return 1000
+    return 800
 
 def getOdometryMeasurement(joystickLeft, joystickRight):
     global update_time, wheel_distance, radius
@@ -167,7 +174,7 @@ def particle_filter(particles, u_t, pos):
     :param pos: current position of the robot (used for the first test of motion model)
     :return: x_t: set of particles at time t (shape: 3 x num of particles)
     """
-    global map_size_x, map_size_y, entropy, entropy_sum, entropy_counter, random_percentage
+    global map_size_x, map_size_y, random_percentage, search, angle
     max_weight = 0
     weights = []
     x_cap = []
@@ -193,13 +200,25 @@ def particle_filter(particles, u_t, pos):
                                size=getNumberOfParticles() - rand_particles, replace=True, p=prob)
     x_t = (np.asarray(x_cap)[indices])
     for i in range(rand_particles):
-        x_t = np.append(x_t, [[random.uniform(-map_size_x, map_size_x), random.uniform(-map_size_y, map_size_y),
-                               random.choice([0, -np.pi, np.pi, np.pi/2, -np.pi/2])]], axis=0)
+        if search == "global":
+            if angle == "fixed":
+                x_t = np.append(x_t, [[random.uniform(-map_size_x, map_size_x), random.uniform(-map_size_y, map_size_y),
+                                       random.choice([0, -np.pi, np.pi, np.pi/2, -np.pi/2])]], axis=0)
+            else:
+                x_t = np.append(x_t, [[random.uniform(-map_size_x, map_size_x), random.uniform(-map_size_y, map_size_y),
+                                       random.uniform(0, 2*np.pi)]], axis=0)
+        else:
+            if angle == "fixed":
+                x_t = np.append(x_t, [[pos[0]+random.uniform(-2,2), pos[1]+random.uniform(-2, 2),
+                                       random.choice([0, np.pi, np.pi / 2, -np.pi / 2])]], axis=0)
+            else:
+                x_t = np.append(x_t, [[pos[0] + random.uniform(-2, 2), pos[1] + random.uniform(-2, 2),
+                                       random.uniform(0, 2*np.pi)]], axis=0)
     return x_t
 
 
 def doBehavior(distance, direction, pos, marsData, waypoints, walls, joystickLeft, joystickRight):
-    global first_time, particles, map_size_x, map_size_y
+    global first_time, particles, map_size_x, map_size_y, search, angle
 
     """
     pos may only be used as a reference
@@ -209,11 +228,21 @@ def doBehavior(distance, direction, pos, marsData, waypoints, walls, joystickLef
     if first_time:
         pData = pointCloudData["particles"]
         for i in range(getNumberOfParticles()):
-            #particle = [pos[0], pos[1], pos[2]]
-            particle = [random.uniform(-map_size_x, map_size_x), random.uniform(-map_size_y,map_size_y), random.choice([0, np.pi, -np.pi, np.pi/2, -np.pi/2])]
+            if search == "global":
+                if angle == "fixed":
+                    particle = [random.uniform(-map_size_x, map_size_x), random.uniform(-map_size_y,map_size_y),
+                                random.choice([0, np.pi, -np.pi, np.pi/2, -np.pi/2])]
+                else:
+                    particle = [random.uniform(-map_size_x, map_size_x), random.uniform(-map_size_y, map_size_y),
+                                random.uniform(0, 2*np.pi)]
+            else:
+                if angle == "fixed":
+                    particle = [pos[0]+random.uniform(-2, 2), pos[1]+random.uniform(-2, 2),
+                                random.choice([0, np.pi, np.pi/2, -np.pi/2])]
+                else:
+                    particle = [pos[0] + random.uniform(-2, 2), pos[1] + random.uniform(-2, 2),
+                                random.uniform(0, 2*np.pi)]
             particles.append(particle)
-            #logMessage("original particles %s" %particles)
-
         first_time = False
 
     #print "Joystick input: (" + str(joystickLeft) + " : " +str(joystickRight) +")" + " direction: " + str(direction)
