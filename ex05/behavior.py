@@ -38,7 +38,7 @@ basePos = np.array([[0.320234, 0.230233],
                     [-0.306395, 0.214315],
                     [-0.306395, -0.214316]])
 directions = np.array([0.262, -1.309, 1.833, -2.879])
-alphas = [2, 1.5, 1, 1]
+alphas = [0.1, 0.1, 1, 1]
 search = "global"
 angle = "fixed"
 
@@ -64,7 +64,7 @@ def dist(p1, p2):
 #(initializes the array to draw the particles)
 
 def getNumberOfParticles():
-    return 800
+    return 1000
 
 def getOdometryMeasurement(joystickLeft, joystickRight):
     global update_time, wheel_distance, radius
