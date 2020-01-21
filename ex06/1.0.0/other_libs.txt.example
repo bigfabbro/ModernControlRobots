@@ -1,0 +1,12 @@
+# additional list of libraries to be loaded after the core libraries have been loaded
+connexion_plugin
+data_broker_gui
+cfg_manager_gui
+lib_manager_gui
+SkyDomePlugin
+PythonMars
+VirtualJoystickPlugin
+CameraGUI
+data_broker_plotter2
+log_console
+

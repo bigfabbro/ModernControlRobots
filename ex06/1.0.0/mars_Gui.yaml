@@ -1,0 +1,25 @@
+MarsGui:
+  - name: Docks
+    type: string
+    value: ""
+  - name: Main Window/Window Height
+    type: int
+    value: 23
+  - name: Main Window/Window Left
+    type: int
+    value: 1305
+  - name: Main Window/Window Top
+    type: int
+    value: 1288
+  - name: Main Window/Window Width
+    type: int
+    value: 864
+  - name: Main Window/docking
+    type: bool
+    value: true
+  - name: Mars Style
+    type: bool
+    value: false
+  - name: resources_path
+    type: string
+    value: ../../../../share/mars/gui/resources

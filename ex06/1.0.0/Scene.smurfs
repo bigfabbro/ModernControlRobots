@@ -1,0 +1,3 @@
+entities:
+- {file: ../../../../../models/robots/wheelchair/mars_scene/wheelchair.scene, name: model1}
+- {file: ../../../../../models/environments/office1/mars_scene/office1.scene, name: model2}

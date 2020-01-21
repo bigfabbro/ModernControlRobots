@@ -1,0 +1,181 @@
+Windows:
+  - name: Console/Window Top
+    type: int
+    value: 0
+  - name: Console/area
+    type: int
+    value: 1
+  - name: Console/floating
+    type: bool
+    value: false
+  - name: Console/height
+    type: int
+    value: 461
+  - name: Console/hidden
+    type: bool
+    value: false
+  - name: Console/left
+    type: int
+    value: 0
+  - name: Console/top
+    type: int
+    value: 540
+  - name: Console/width
+    type: int
+    value: 395
+  - name: DataBrokerWidget/hidden
+    type: bool
+    value: true
+  - name: DataBroker_ConnectionWidget/hidden
+    type: bool
+    value: true
+  - name: DialogDistance/Window Top
+    type: int
+    value: 29
+  - name: DialogDistance/height
+    type: int
+    value: 1001
+  - name: DialogDistance/hidden
+    type: bool
+    value: true
+  - name: DialogDistance/left
+    type: int
+    value: 0
+  - name: DialogDistance/width
+    type: int
+    value: 1920
+  - name: Dialog_Motor_Control/Window Top
+    type: int
+    value: 283
+  - name: Dialog_Motor_Control/height
+    type: int
+    value: 400
+  - name: Dialog_Motor_Control/hidden
+    type: bool
+    value: true
+  - name: Dialog_Motor_Control/left
+    type: int
+    value: 439
+  - name: Dialog_Motor_Control/width
+    type: int
+    value: 824
+  - name: Docks
+    type: string
+    value: VirtualJoystick%%Console%%Entity View%%cfg%%
+  - name: Entity View/Window Top
+    type: int
+    value: 24
+  - name: Entity View/area
+    type: int
+    value: 1
+  - name: Entity View/floating
+    type: bool
+    value: false
+  - name: Entity View/height
+    type: int
+    value: 220
+  - name: Entity View/hidden
+    type: bool
+    value: true
+  - name: Entity View/left
+    type: int
+    value: 0
+  - name: Entity View/top
+    type: int
+    value: 519
+  - name: Entity View/width
+    type: int
+    value: 438
+  - name: LibManagerWidget/Window Top
+    type: int
+    value: 40
+  - name: LibManagerWidget/height
+    type: int
+    value: 400
+  - name: LibManagerWidget/hidden
+    type: bool
+    value: true
+  - name: LibManagerWidget/left
+    type: int
+    value: 40
+  - name: LibManagerWidget/width
+    type: int
+    value: 400
+  - name: Main Window/Window Height
+    type: int
+    value: 1001
+  - name: Main Window/Window Left
+    type: int
+    value: 0
+  - name: Main Window/Window Top
+    type: int
+    value: 29
+  - name: Main Window/Window Width
+    type: int
+    value: 1920
+  - name: Main Window/docking
+    type: bool
+    value: true
+  - name: Mars Style
+    type: bool
+    value: false
+  - name: Plotter 1/hidden
+    type: bool
+    value: true
+  - name: SelectionTree/Window Top
+    type: int
+    value: 0
+  - name: SelectionTree/height
+    type: int
+    value: 367
+  - name: SelectionTree/hidden
+    type: bool
+    value: true
+  - name: SelectionTree/left
+    type: int
+    value: 0
+  - name: SelectionTree/width
+    type: int
+    value: 217
+  - name: VirtualJoystick/area
+    type: int
+    value: 1
+  - name: VirtualJoystick/floating
+    type: bool
+    value: false
+  - name: VirtualJoystick/height
+    type: int
+    value: 474
+  - name: VirtualJoystick/left
+    type: int
+    value: 0
+  - name: VirtualJoystick/top
+    type: int
+    value: 683
+  - name: VirtualJoystick/width
+    type: int
+    value: 360
+  - name: cfg/Window Top
+    type: int
+    value: 40
+  - name: cfg/area
+    type: int
+    value: 1
+  - name: cfg/floating
+    type: bool
+    value: false
+  - name: cfg/height
+    type: int
+    value: 470
+  - name: cfg/hidden
+    type: bool
+    value: false
+  - name: cfg/left
+    type: int
+    value: 0
+  - name: cfg/top
+    type: int
+    value: 65
+  - name: cfg/width
+    type: int
+    value: 395

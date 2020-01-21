@@ -1,0 +1,13 @@
+Config:
+  - name: arg0
+    type: string
+    value: C:\Users\Fabrizio\Desktop\BagelMagic_win\install\bin\mars_app.exe
+  - name: arg1
+    type: string
+    value: -s
+  - name: arg2
+    type: string
+    value: Scene.smurfs
+  - name: config_path
+    type: string
+    value: .

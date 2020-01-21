@@ -1,0 +1,76 @@
+Graphics:
+  - name: backfaceCulling
+    type: bool
+    value: true
+  - name: brightness
+    type: double
+    value: 1
+  - name: defaultMaxNumNodeLights
+    type: int
+    value: 2
+  - name: draw normals
+    type: bool
+    value: false
+  - name: drawLineLaser
+    type: bool
+    value: false
+  - name: drawMainCamera
+    type: bool
+    value: true
+  - name: drawRain
+    type: bool
+    value: false
+  - name: drawSnow
+    type: bool
+    value: false
+  - name: hudHeight
+    type: int
+    value: 1080
+  - name: hudWidth
+    type: int
+    value: 1920
+  - name: make movie
+    type: bool
+    value: false
+  - name: marsShader
+    type: bool
+    value: true
+  - name: marsShadow
+    type: bool
+    value: false
+  - name: num multisamples
+    type: int
+    value: 0
+  - name: resources_path
+    type: string
+    value: ../../../../share/mars/graphics/resources
+  - name: shadowSamples
+    type: int
+    value: 1
+  - name: shadowTextureSize
+    type: int
+    value: 2048
+  - name: showCoords
+    type: bool
+    value: false
+  - name: showGrid
+    type: bool
+    value: false
+  - name: showSelection
+    type: bool
+    value: false
+  - name: useNoise
+    type: bool
+    value: true
+  - name: window1Height
+    type: int
+    value: 936
+  - name: window1Left
+    type: int
+    value: 400
+  - name: window1Top
+    type: int
+    value: 65
+  - name: window1Width
+    type: int
+    value: 1520

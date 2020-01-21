@@ -1,0 +1,49 @@
+Simulator:
+  - name: Gravity x
+    type: double
+    value: 3.469446951953614e-18
+  - name: Gravity y
+    type: double
+    value: 0
+  - name: Gravity z
+    type: double
+    value: -9.81
+  - name: avg count steps
+    type: int
+    value: 20
+  - name: calc_ms
+    type: double
+    value: 40
+  - name: debug time
+    type: bool
+    value: false
+  - name: draw contacts
+    type: bool
+    value: false
+  - name: faststep
+    type: bool
+    value: false
+  - name: getTime:useNow
+    type: bool
+    value: false
+  - name: onPhysicsError
+    type: string
+    value: abort
+  - name: realtime calc
+    type: bool
+    value: true
+  - name: sync gui
+    type: bool
+    value: false
+  - name: sync time
+    type: double
+    value: 40
+  - name: visual rep.
+    type: int
+    value: 1
+  - name: world cfm
+    type: double
+    value: 1e-05
+  - name: world erp
+    type: double
+    value: 0.2
