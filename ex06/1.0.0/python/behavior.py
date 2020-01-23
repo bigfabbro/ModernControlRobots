@@ -33,40 +33,54 @@ def updatePath(pose, goal):
           appendLines("path", path[i+1][0], path[i+1][1], 0.45)
 
 
+
 def autonomousDrive(pose, goal):
     global path
+    #take the robot position, thus the particle's <x,y> (that comes from the particle filter)
     rob_pos = [pose[0], pose[1]]
+    #update the path to calculate where to move, using the astar algorithm, starting from the <x,y> of the particle
     updatePath(pose, goal)
+    #calculating the coordinate of the closest wayppoint (on the path from astar) with respect to the <x,y> of the particle
     scaled_wp = np.subtract(path[-2], rob_pos)
+    #the direction of the robot expressed as <cos,sin>
     vers = [np.cos(pose[2]), np.sin(pose[2])]
-    #F_att = k_att * np.linalg.norm(scaled_wp)
     norm = np.linalg.norm(scaled_wp) * np.linalg.norm(vers)
+    
+    #The angle between the direction of the robot and the closest waypoint on the path;
+    #this will be used to calculate where to move in order to reach the waypoint
+
+    #angle is used to build a range in where the robot has to adjust its direction (with respect to the waypoint)
+    #sin is used to understand where (if right or left) the waypoint is
+    
     angle = np.arccos(np.dot(vers, scaled_wp)/norm)
     sin = np.cross(vers, scaled_wp)/norm
-    if sin < 0 and angle > 0.05:
+
+    #rotate on itself to align its direction with the waypoint
+    if sin < 0 and angle > 0.1:
         la = 1.
         ra = -1.
-    elif sin > 0 and angle > 0.05:
+    elif sin > 0 and angle > 0.1:
         la = -1.
         ra = 1.
+    #if aligned the robot can just go straight
     else:
         la = 2.
         ra = 2.
     
     return la, ra
 
+
+
 def obstacleAvoidance(pose):
     global path, old_path, old_left, old_right, avoiding, forced_waypoint
     rob_pos = [pose[0], pose[1]]
 
-
+    #check if the robot is performing the avoiding routine, if it is, there is nothing more to do
+    #during the avoiding routine the robot turn softly on the side of the new waypoint (instead of the autonomous drive, in witch it turns around its pose)
     if avoiding > 0:
-        print("AVOIDING")
-        path = old_path
         avoiding = avoiding - 1
         scaled_wp = np.subtract(forced_waypoint, rob_pos)
         vers = [np.cos(pose[2]), np.sin(pose[2])]
-        #F_att = k_att * np.linalg.norm(scaled_wp)
         norm = np.linalg.norm(scaled_wp) * np.linalg.norm(vers)
         angle = np.arccos(np.dot(vers, scaled_wp)/norm)
         if angle > 0.1:
@@ -81,15 +95,18 @@ def obstacleAvoidance(pose):
         else:
             return 0., 0., True
         
-
+    #check if the path is changed (this can be changed only by the autonomous drive)
     elif np.array_equal(path[-2], old_path[-2]) != True:
-        print ("CAMBIO PATH")
         dist = np.sqrt(np.sum(np.square(np.subtract(rob_pos, old_path[-2]))))
+        #check if the robot is yet too far from to the waypoint of the old path
+        #if it is still too far, it has to reach the waypoint before to take another path 
         if  dist > 0.15:
+            #force the new proposed path (by the autonomous drive) to be the previous one
             path = old_path
+
+            #perform the same turning routine of the autonomous drive..
             scaled_wp = np.subtract(path[-2], rob_pos)
             vers = [np.cos(pose[2]), np.sin(pose[2])]
-            #F_att = k_att * np.linalg.norm(scaled_wp)
             norm = np.linalg.norm(scaled_wp) * np.linalg.norm(vers)
             angle = np.arccos(np.dot(vers, scaled_wp)/norm)
             sin = np.cross(vers, scaled_wp)/norm
@@ -104,28 +121,18 @@ def obstacleAvoidance(pose):
                 ra = 2.
             
             return la, ra, True
+
         else:
+            #if it is close enough to the waypoint it can start to turn over the next one (rotating on itself to align with the new waypoint to reach)
+            #forced_waypoint is used to not allow changing in path during the avoiding routine
             forced_waypoint = path[-2]
-            scaled_wp = np.subtract(path[-2], rob_pos)
-            vers = [np.cos(pose[2]), np.sin(pose[2])]
-            #F_att = k_att * np.linalg.norm(scaled_wp)
-            norm = np.linalg.norm(scaled_wp) * np.linalg.norm(vers)
-            angle = np.arccos(np.dot(vers, scaled_wp)/norm)
-            if angle > 0.1:
-                avoiding = 50
-                sin = np.cross(vers, scaled_wp)/norm
-                if sin < 0:
-                    la = 3.
-                    ra = 2.
-                if sin > 0:
-                    la = 2.
-                    ra = 3.
-                return la, ra, True
-            else:
-                return 0., 0., False
+            avoiding = 50
+            return 0., 0., False
             
     else:
         return 0.,0.,False
+
+
 
 def doBehavior(distance, marsData, pose, goal):
     global right_actuator, left_actuator, first_time, old_path, path, old_left, old_right, prev_goal
@@ -152,13 +159,6 @@ def doBehavior(distance, marsData, pose, goal):
     if change == True:
         left_actuator, right_actuator = la,ra
 
-
-    #print (pose)
-    #behavior = marsData["Config"]["Robotik2"]["behavior"]
-
-    # if timing(1):
-    #     message = "sensor:"
-    #     logMessage(message)
     return
 
 
