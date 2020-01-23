@@ -4,19 +4,14 @@ import astar
 import numpy as np
 
 random.seed()
-hg = []
 right_actuator = 0.
 left_actuator = 0.
 path = []
-update_time = 0.02
-wheel_distance = 0.485751326
-radius = 0.15
 waypoints = None
 walls = None
+
 first_time = True
 old_path = []
-old_left = 0
-old_right = 0
 avoiding = 0
 forced_waypoint = []
 prev_goal = []
@@ -72,7 +67,7 @@ def autonomousDrive(pose, goal):
 
 
 def obstacleAvoidance(pose):
-    global path, old_path, old_left, old_right, avoiding, forced_waypoint
+    global path, old_path, avoiding, forced_waypoint
     rob_pos = [pose[0], pose[1]]
 
     #check if the robot is performing the avoiding routine, if it is, there is nothing more to do
@@ -135,7 +130,7 @@ def obstacleAvoidance(pose):
 
 
 def doBehavior(distance, marsData, pose, goal):
-    global right_actuator, left_actuator, first_time, old_path, path, old_left, old_right, prev_goal
+    global right_actuator, left_actuator, first_time, old_path, path, prev_goal
     # pose[0] = x
     # pose[1] = y
     # pose[2] = z
@@ -146,18 +141,27 @@ def doBehavior(distance, marsData, pose, goal):
         updatePath(pose, goal)
         first_time = False
 
+    # the prev goal is used to "reset" when the goal change while running on the simulator
     prev_goal = goal
+
+    # here the old path is stored, the autonomous drive calculate the path everytime in his routine
     old_path = path
-        
-    old_left = left_actuator
-    old_right = right_actuator
+    
     joystickLeft = marsData["Config"]["VirtualJoystick"]["x"]
     joystickRight = marsData["Config"]["VirtualJoystick"]["y"]
+
     left_actuator, right_actuator = autonomousDrive(pose, goal)
 
     la, ra, change = obstacleAvoidance(pose)
     if change == True:
+        # here is the suppression, where the obstacleavoidance change the value given by the autonomous drive 
         left_actuator, right_actuator = la,ra
+    
+    #check if the joystick from the simulator are "active" (i.e. not zero at least one of them)
+    if joystickLeft != 0 or joystickRight != 0:
+        # here is the suppression
+        left_actuator =  joystickLeft
+        right_actuator = joystickRight
 
     return
 
