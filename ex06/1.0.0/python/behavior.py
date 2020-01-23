@@ -4,22 +4,20 @@ import astar
 import numpy as np
 
 random.seed()
+hg = []
 right_actuator = 0.
 left_actuator = 0.
 path = []
+update_time = 0.02
+wheel_distance = 0.485751326
+radius = 0.15
 waypoints = None
 walls = None
 first_time = True
-
-#used to not allow change of path before arriving to the correct waypoint
 old_path = []
-#intialize the avoiding routine
 avoiding = 0
-#used to not change the "next waypoint" while avoiding the obstacle
 forced_waypoint = []
-#to allow the changing of goal during the execution of the simulation
 prev_goal = []
-
 
 
 def updatePath(pose, goal):
@@ -132,6 +130,18 @@ def obstacleAvoidance(pose):
     else:
         return 0.,0.,False
 
+def joystick(joystickLeft,joystickRight,pose,goal):
+    la = 0
+    ra = 0
+    change = False
+    if joystickLeft != 0 or joystickRight != 0:
+        updatePath(pose,goal)
+        la = joystickLeft
+        ra = joystickRight
+        change = True
+    return la,ra,change
+
+
 
 
 def doBehavior(distance, marsData, pose, goal):
@@ -157,16 +167,16 @@ def doBehavior(distance, marsData, pose, goal):
 
     left_actuator, right_actuator = autonomousDrive(pose, goal)
 
-    la, ra, change = obstacleAvoidance(pose)
-    if change == True:
-        # here is the suppression, where the obstacleavoidance change the value given by the autonomous drive 
+    la, ra, change_ob = obstacleAvoidance(pose)
+    if change_ob == True:
+        # here is the suppresion, where the obstacleavoidance change the value given by the autonomous drive 
         left_actuator, right_actuator = la,ra
     
-    #check if the joystick from the simulator are "active" (i.e. not zero at least one of them)
-    if joystickLeft != 0 or joystickRight != 0:
-        # here is the suppression
-        left_actuator =  joystickLeft
-        right_actuator = joystickRight
+    la, ra, change_jo = joystick(joystickLeft,joystickRight,pose,goal)
+    if change_jo == True:
+        # here is the suppresion
+        left_actuator, right_actuator = la,ra
+
 
     return
 
