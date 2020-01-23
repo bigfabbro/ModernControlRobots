@@ -9,12 +9,17 @@ left_actuator = 0.
 path = []
 waypoints = None
 walls = None
-
 first_time = True
+
+#used to not allow change of path before arriving to the correct waypoint
 old_path = []
+#intialize the avoiding routine
 avoiding = 0
+#used to not change the "next waypoint" while avoiding the obstacle
 forced_waypoint = []
+#to allow the changing of goal during the execution of the simulation
 prev_goal = []
+
 
 
 def updatePath(pose, goal):
