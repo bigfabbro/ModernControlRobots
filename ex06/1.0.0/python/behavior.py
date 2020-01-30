@@ -4,13 +4,9 @@ import astar
 import numpy as np
 
 random.seed()
-hg = []
 right_actuator = 0.
 left_actuator = 0.
 path = []
-update_time = 0.02
-wheel_distance = 0.485751326
-radius = 0.15
 waypoints = None
 walls = None
 first_time = True
@@ -21,14 +17,17 @@ prev_goal = []
 
 
 def updatePath(pose, goal):
-     global path, waypoints, walls
-     path = astar.run(waypoints, walls, np.array([pose[0], pose[1]]),
-                      np.array(goal))
-     clearLines("path")
-     configureLines("path", 5, 0.8, 0.6, 0.2)
-     for i in range(len(path)-1):
-          appendLines("path", path[i][0], path[i][1], 0.45)
-          appendLines("path", path[i+1][0], path[i+1][1], 0.45)
+    global path, waypoints, walls
+    path = astar.run(waypoints, walls, np.array([pose[0], pose[1]]),
+                    np.array(goal))
+
+def drawPath():
+    clearLines("path")
+    configureLines("path", 5, 0.8, 0.6, 0.2)
+    for i in range(len(path)-1):
+        appendLines("path", path[i][0], path[i][1], 0.45)
+        appendLines("path", path[i+1][0], path[i+1][1], 0.45)
+
 
 
 
@@ -101,6 +100,7 @@ def obstacleAvoidance(pose):
         if  dist > 0.15:
             #force the new proposed path (by the autonomous drive) to be the previous one
             path = old_path
+            configureLines("path", 5, 0.8, 0.6, 0.2)
 
             #perform the same turning routine of the autonomous drive..
             scaled_wp = np.subtract(path[-2], rob_pos)
@@ -144,7 +144,7 @@ def joystick(joystickLeft,joystickRight,pose,goal):
 
 
 
-def doBehavior(distance, marsData, pose, goal):
+def doBehavior(distance, marsData, pose, goal,):
     global right_actuator, left_actuator, first_time, old_path, path, prev_goal
     # pose[0] = x
     # pose[1] = y
@@ -177,6 +177,7 @@ def doBehavior(distance, marsData, pose, goal):
         # here is the suppresion
         left_actuator, right_actuator = la,ra
 
+    drawPath()
 
     return
 
